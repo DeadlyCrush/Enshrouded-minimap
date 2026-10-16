@@ -1,9 +1,9 @@
 # Enshrouded Minimap - Community Edition
 
-> **Experimental 0.5.10 / Enshrouded 1.0 core preview (Steam build 25966634).**
+> **Experimental 0.5.11 / Enshrouded 1.0 core preview (Steam build 25966634).**
 > This fork ports local camera tracking and the Vulkan renderer to one exact executable hash.
 > Build/static/synthetic validation is separate from gameplay acceptance, which is pending.
-> Local selected waypoints use a hollow yellow diamond. Remote players, pings, live POIs/tombstones, clock, weather and exploration fog remain disabled on this profile.
+> Local waypoints use a hollow yellow diamond; remote players use green arrows. Pings, live POIs/tombstones, clock, weather and exploration fog remain disabled on this profile.
 > Terrain artwork is the original pre-1.0 asset and has not been updated for new areas.
 > Missed initial creation is recovered from verified native frame metadata. Diagnostics are written to minimap_mod.log beside the game executable.
 > See [1.0 evidence, installation, recovery and verification](docs/compatibility-1.0.md).

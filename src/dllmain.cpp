@@ -1189,7 +1189,7 @@ namespace
     ModMetaData g_metaData = {
         "minimap_mod",
         "Community-maintained in-game minimap with a world clock, players, pings, waypoints and death markers.",
-        "0.5.10",
+        "0.5.11",
         "elxokker; community maintenance by Aerox912",
         "0.0.3",
         true,
@@ -1234,6 +1234,10 @@ namespace
     std::atomic<DWORD> g_lastWaypointTick{ 0 };
     bool g_liveMarkerLayoutSupported = false;
     bool g_localWaypointLayoutSupported = false;
+    bool g_remotePlayerLayoutSupported = false;
+    std::size_t g_basicPlayerStride = 0x60;
+    std::size_t g_lastRemoteDiagnosticCount = MinimapLive::MaxPlayers + 1;
+    DWORD g_lastRemoteDiagnosticTick = 0;
     Mem::Detour* g_playerUiDataHook = nullptr;
     Mem::Detour* g_clearMapMarkersHook = nullptr;
     Mem::Detour* g_daytimeUiHook = nullptr;
@@ -1761,7 +1765,7 @@ namespace
         const bool previousDebugLogging = g_debugLoggingEnabled.exchange(debugLogging);
         const int previousMapSampleStep = g_minimapMapSampleStep.exchange(mapSampleStep);
         const int previousMaxIcons = g_minimapMaxDrawnPoints.exchange(maxIcons);
-        const bool showPlayers = !g_release10Profile && ReadMarkerVisibility(modContext, "show_other_players");
+        const bool showPlayers = (!g_release10Profile || g_remotePlayerLayoutSupported) && ReadMarkerVisibility(modContext, "show_other_players");
         const bool showPings = !g_release10Profile && ReadMarkerVisibility(modContext, "show_pings");
         const bool showWaypoints = (!g_release10Profile || g_localWaypointLayoutSupported) && ReadMarkerVisibility(modContext, "show_waypoints");
         const bool showDeaths = !g_release10Profile && ReadMarkerVisibility(modContext, "show_death_markers");
@@ -4064,10 +4068,10 @@ namespace
     // Steam client 1076226: update_ui_data's declared RenderTransform lookup.
     // Keep all foreign calls and pointer access on the ECS callback thread.
     // The POD output survives the SEH boundary; no foreign pointer is published.
-    bool ReadRemotePlayers(void* ctx, MinimapLive::Marker* output, std::size_t& count, DWORD now)
+    bool ReadRemotePlayers(void* ctx, MinimapLive::Marker* output, std::size_t& count, DWORD now, DiagnosticFault* fault = nullptr)
     {
         count = 0;
-        if (!g_liveMarkerLayoutSupported || !ctx || !g_iterInit || !g_getEcsWorld || !g_lookupComponent)
+        if (!(g_liveMarkerLayoutSupported || g_remotePlayerLayoutSupported) || !ctx || !g_iterInit || !g_getEcsWorld || !g_lookupComponent)
             return false;
         __try
         {
@@ -4085,7 +4089,7 @@ namespace
                 return false;
             for (std::uint32_t id = 1; id <= 1023 && count < MinimapLive::MaxPlayers; ++id)
             {
-                if (id == localId || *reinterpret_cast<const std::uint32_t*>(record[1] + (id - 1) * 0x60) != id)
+                if (id == localId || *reinterpret_cast<const std::uint32_t*>(record[1] + (id - 1) * g_basicPlayerStride) != id)
                     continue;
                 uintptr_t result[2] = {};
                 g_lookupComponent(result, world, record[6], id);
@@ -4107,7 +4111,7 @@ namespace
             }
             return true;
         }
-        __except (EXCEPTION_EXECUTE_HANDLER)
+        __except (CaptureDiagnosticFault(GetExceptionInformation(), fault))
         {
             count = 0;
             return false;
@@ -4122,9 +4126,24 @@ namespace
         g_lastRemoteCaptureTick = now;
         MinimapLive::Marker markers[MinimapLive::MaxPlayers] = {};
         std::size_t count = 0;
-        ReadRemotePlayers(ctx, markers, count, now);
-        std::lock_guard<std::mutex> lock(g_liveMarkerMutex);
-        g_remotePlayers.assign(markers, markers + count);
+        DiagnosticFault fault{};
+        const bool ok = ReadRemotePlayers(ctx, markers, count, now, &fault);
+        {
+            std::lock_guard<std::mutex> lock(g_liveMarkerMutex);
+            g_remotePlayers.assign(markers, markers + count);
+        }
+        if (g_remotePlayerLayoutSupported && (count != g_lastRemoteDiagnosticCount ||
+            now - g_lastRemoteDiagnosticTick >= 10000))
+        {
+            g_lastRemoteDiagnosticCount = count;
+            g_lastRemoteDiagnosticTick = now;
+            std::ostringstream out;
+            out << "[Minimap] remote player feed | read_ok=" << ok << " | players=" << count
+                << " | basic_stride=" << Hex(g_basicPlayerStride) << " | visible=" << g_showOtherPlayers.load();
+            if (count) out << " | first_id=" << markers[0].id;
+            if (fault.code) out << " | exception=" << Hex(fault.code) << " | address=" << Hex(fault.address);
+            Log(out.str());
+        }
     }
 
     void CapturePingEvents(void* list, std::uint32_t excludedSender, DWORD now)
@@ -9662,6 +9681,10 @@ namespace
 
             g_release10Profile = false;
             g_localWaypointLayoutSupported = false;
+            g_remotePlayerLayoutSupported = false;
+            g_basicPlayerStride = 0x60;
+            g_lastRemoteDiagnosticCount = MinimapLive::MaxPlayers + 1;
+            g_lastRemoteDiagnosticTick = 0;
             g_rendererBuildFaulted = false;
             g_firstOverlaySubmitLogged = false;
             g_cameraEntityArrayOffset = 0x7E0;
@@ -9730,12 +9753,35 @@ namespace
                         reinterpret_cast<void*>(&CaptureWaypointsHook), "1.0 local waypoint component");
                     g_localWaypointLayoutSupported = g_playerWaypointsUiHook != nullptr;
                 }
+                const std::array<std::uint8_t,22> remotePrefix = {
+                    0x48,0x89,0x4C,0x24,0x08,0x55,0x53,0x57,0x41,0x54,0x41,0x55,0x41,0x57,
+                    0x48,0x8D,0xAC,0x24,0xA8,0xFE,0xFF,0xFF };
+                const std::uint8_t remoteRecord[] = {
+                    0x41,0xB8,0x98,0,0,0,0x48,0x8D,0x54,0x24,0x20,0xE8,0xB3,0x2B,0x6A,0 };
+                const std::uint8_t basicStride[] = {
+                    0x8D,0x42,0xFF,0x3D,0xFE,0x03,0,0,0x77,0x1D,0x4C,0x8D,0x0C,0x80,
+                    0x49,0xC1,0xE1,0x05,0x43,0x39,0x14,0x01,0x75,0x0F };
+                if (IsNamedSystemAt(0x1E10980, "update_ui_data", 0x3179C0) &&
+                    BytesMatchRva(0x3179DD, remoteRecord, sizeof(remoteRecord)) &&
+                    BytesMatchRva(0x3B1800, basicStride, sizeof(basicStride)) &&
+                    BytesMatchRva(0x9B2A20, worldGetter, sizeof(worldGetter)) &&
+                    BytesMatchRva(0x30E6B5, componentCall, sizeof(componentCall)))
+                {
+                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + 0x9B2A20);
+                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + 0x9A5860);
+                    g_basicPlayerStride = 0xA0;
+                    g_playerUiDataHook = InstallEntryHook(0x3179C0, remotePrefix,
+                        reinterpret_cast<void*>(&CapturePlayerUiDataHook), "1.0 remote player transforms");
+                    g_remotePlayerLayoutSupported = g_playerUiDataHook != nullptr;
+                }
+                Log(g_remotePlayerLayoutSupported ? "[Minimap] 1.0 remote player reader ready; green arrows enabled"
+                    : "[Minimap] 1.0 remote player reader unavailable");
                 Log(g_localWaypointLayoutSupported ? "[Minimap] 1.0 local waypoint reader ready; yellow diamond enabled"
                     : "[Minimap] 1.0 local waypoint reader unavailable");
                 g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
                 loaded = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
                 Log("[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
-                Log("[Minimap] 1.0 core preview: remote markers, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
+                Log("[Minimap] 1.0 core preview: pings, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
                 RefreshMinimapConfig(modContext, true);
                 return;
             }
@@ -10064,6 +10110,7 @@ namespace
             g_release10VulkanInit = nullptr;
             g_liveMarkerLayoutSupported = false;
             g_localWaypointLayoutSupported = false;
+            g_remotePlayerLayoutSupported = false;
             g_getEcsWorld = nullptr;
             g_lookupComponent = nullptr;
             ClearLiveMarkers();
@@ -10195,7 +10242,7 @@ namespace
 extern "C" __declspec(dllexport) Mod* CreateModInstance()
 {
     InitializeDiagnosticLog();
-    Log("[Minimap] factory version=0.5.10");
+    Log("[Minimap] factory version=0.5.11");
     return new MinimapMod();
 }
 

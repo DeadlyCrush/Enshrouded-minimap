@@ -16,7 +16,7 @@ namespace
         std::memcpy(static_cast<unsigned char*>(target) + offset, &value, sizeof(value));
     }
     struct Transform { std::int64_t xyz[3]; float q[4]; } transforms[1024] = {};
-    std::array<unsigned char, 1023 * 0x60> basicPlayers{};
+    std::array<unsigned char, 1023 * 0xA0> basicPlayers{};
     std::uint32_t localPlayer[2] = { 0, 9 };
     uintptr_t context[2] = { 0x1234, 27 };
     WaypointsUiIterationRecord waypointRecord{};
@@ -330,5 +330,72 @@ int main(int argc, char** argv)
     DrawWaypointDiamond(renderer, nullptr, 104, 64);
     Check(pixels[64][104].b == 0.9f, "waypoint preserves a previously drawn POI icon");
     if (argc > 1) WritePreview(argv[1]);
+    {
+        // Real 1.0 BasicPlayer entries are 0xA0 apart. Keep this separate from
+        // the preceding legacy 0x60 fixtures so a hard-coded stride regresses.
+        ClearLiveMarkers();
+        basicPlayers.fill(0);
+        g_liveMarkerLayoutSupported = false;
+        g_remotePlayerLayoutSupported = true;
+        g_localWaypointLayoutSupported = false;
+        g_basicPlayerStride = 0xA0;
+        g_showOtherPlayers = true;
+        g_showPings = false;
+        Put(basicPlayers.data(), 2 * 0xA0, std::uint32_t(3));
+        Put(basicPlayers.data(), 6 * 0xA0, std::uint32_t(7));
+        Put(basicPlayers.data(), 8 * 0xA0, std::uint32_t(9));
+        transforms[3] = { { WorldToFixed(3810), WorldToFixed(825), WorldToFixed(1898) }, { 0, 0, 0, 1 } };
+        transforms[7] = { { WorldToFixed(3850), WorldToFixed(825), WorldToFixed(1898) }, { 0, 0, 0, 1 } };
+        const int priorLookups = lookups;
+        CapturePlayers();
+        Check(g_remotePlayers.size() == 2 && g_remotePlayers[0].id == 3 && g_remotePlayers[1].id == 7 &&
+            lookups == priorLookups + 2 && context[1] == 27 && !badLookup,
+            "1.0 remote-only capability reads A0 entries and excludes local player without mutating cursor");
+        Check(g_pings.empty() && !g_liveMarkerLayoutSupported && !g_localWaypointLayoutSupported,
+            "1.0 remote capability does not opt in legacy pings or local waypoint layout");
+        g_basicPlayerStride = 0x60;
+        CapturePlayers();
+        Check(g_remotePlayers.empty(), "legacy stride misses the independently spaced 1.0 fixture");
+        g_basicPlayerStride = 0xA0;
+        transforms[3].xyz[0] = WorldToFixed(3820);
+        transforms[3].q[1] = transforms[3].q[3] = 0.70710678f;
+        CapturePlayers();
+        Check(g_remotePlayers.size() == 2 && g_remotePlayers[0].x == WorldToFixed(3820) &&
+            std::fabs(g_remotePlayers[0].heading - 1.5707963f) < 0.0001f,
+            "1.0 friend movement and facing refresh native snapshot");
+        Put(basicPlayers.data(), 6 * 0xA0, std::uint32_t(0));
+        CapturePlayers();
+        Check(g_remotePlayers.size() == 1 && g_remotePlayers[0].id == 3,
+            "1.0 departed friend is removed on next capture");
+        g_showOtherPlayers = false;
+        CopyLiveMarkers(players, pings, GetTickCount());
+        Check(players.empty() && pings.empty(), "1.0 remote visibility toggle hides friends independently");
+        g_showOtherPlayers = true;
+        CopyLiveMarkers(players, pings, GetTickCount());
+        Check(players.size() == 1 && pings.empty(), "1.0 friend toggle restores fresh player without pings");
+        for (auto& row : pixels) for (auto& pixel : row) pixel = {};
+        clearCalls = 0;
+        DrawLiveMarkers(renderer, nullptr, {}, 3810, 1898, 2, 0, 64, 64, 60);
+        bool friendGreen = false;
+        for (const auto& row : pixels) for (const auto& pixel : row)
+            friendGreen |= pixel.g > 0.5f && pixel.g > pixel.r && pixel.g > pixel.b;
+        Check(clearCalls > 0 && friendGreen,
+            "1.0 remote-only production draw emits actual green player artwork on CPU target");
+        CopyLiveMarkers(players, pings, GetTickCount() + MinimapLive::PlayerStaleMs);
+        Check(players.empty(), "1.0 interrupted remote feed expires independently");
+        transforms[3].q[1] = std::numeric_limits<float>::quiet_NaN();
+        CapturePlayers();
+        Check(g_remotePlayers.empty(), "1.0 remote feed rejects invalid quaternion");
+        transforms[3].q[1] = 0; transforms[3].q[3] = 1;
+        transforms[3].xyz[0] = WorldToFixed(50000);
+        CapturePlayers();
+        Check(g_remotePlayers.empty(), "1.0 remote feed rejects off-map transform");
+        g_remotePlayerLayoutSupported = false;
+        const int disabledLookups = lookups;
+        Check(!ReadRemotePlayers(context, output, count, GetTickCount()) && lookups == disabledLookups,
+            "disabling both remote capabilities prevents native lookups");
+        ClearLiveMarkers();
+        g_basicPlayerStride = 0x60;
+    }
     return 0;
 }

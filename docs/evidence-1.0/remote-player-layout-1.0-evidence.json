@@ -1,0 +1,143 @@
+{
+  "verification": "Read-only static PE/Capstone; no live multiplayer verified",
+  "uiSystem": {
+    "registryRva": "0x1E10980",
+    "functionRva": "0x3179C0",
+    "recordSize": "0x98",
+    "recordFields": {
+      "basicPlayerInfos": "record+0x08 [1]",
+      "localPlayerData": "record+0x10 [2]; localId uint32 at +4",
+      "renderTransformLookupContext": "record+0x30 [6]"
+    }
+  },
+  "basicPlayers": {
+    "idRange": "1..1023",
+    "slotStride": "0xA0 (old 0x60 invalid)",
+    "slotIdOffset": 0,
+    "slotFormula": "basicBase + (id-1)*0xA0",
+    "sourceFunctionRva": "0x3B1800",
+    "proof": "LEA R9,[RAX+RAX*4]; SHL R9,5; CMP DWORD[R9+R8],EDX. RAX=id-1."
+  },
+  "lookup": {
+    "getWorldRva": "0x9B2A20",
+    "lookupRva": "0x9A5860",
+    "callABI": "GetWorld(*(uintptr_t*)ctx); Lookup(result16bytes,world,record[6],id). Result[0] component pointer.",
+    "proof": "Actual UI player transform query at 31801E/318030."
+  },
+  "renderTransform": {
+    "xyz": "int64 fixed32.32 at 0/8/0x10",
+    "quaternion": "4x float at0x18/0x1C/0x20/0x24",
+    "positionProof": "318044/31804F/318055 CVTSI2SS from qwords at0/8/10, multiplied fixed scale",
+    "quaternionProof": "2B291B camera system reads RenderTransform from iteration record+10 then quaternion scalar floats at18/1C/20/24 and quaternion arithmetic. Same existing component layout.",
+    "limits": "This proves memory shape, not actual remote orientation quality or network update cadence.",
+    "sameTypeEvidence": {
+      "typeNamePointer": "0x141C8C618",
+      "typeName": "RenderTransform",
+      "length": 15,
+      "cameraQueryArrayRva": "0x1E00F68",
+      "cameraEntryRva": "0x1E00F78 (second query component -> record[2])",
+      "updateLookupArrayRva": "0x1E108A8 (record[6])",
+      "updateRegistryLookupPointer": "registry1E10980 +0xE0 points1E108A8,count1",
+      "verification": "Both array entries use exactly the same type-name pointer and length. Registry linkage independently cross-checked by loader_review."
+    }
+  },
+  "disassembly": {
+    "recordInit": [
+      "0x3179c0: mov qword ptr [rsp + 8], rcx",
+      "0x3179c5: push rbp",
+      "0x3179c6: push rbx",
+      "0x3179c7: push rdi",
+      "0x3179c8: push r12",
+      "0x3179ca: push r13",
+      "0x3179cc: push r15",
+      "0x3179ce: lea rbp, [rsp - 0x158]",
+      "0x3179d6: sub rsp, 0x258",
+      "0x3179dd: mov r8d, 0x98",
+      "0x3179e3: lea rdx, [rsp + 0x20]",
+      "0x3179e8: call 0x9ba5a0",
+      "0x3179ed: mov rdx, qword ptr [rsp + 0x60]",
+      "0x3179f2: mov rbx, qword ptr [rsp + 0x30]",
+      "0x3179f7: mov qword ptr [rbp + 0x198], rdx",
+      "0x3179fe: movzx eax, word ptr [rdx + 0x40]",
+      "0x317a02: mov ebx, dword ptr [rbx + 4]"
+    ],
+    "lookupAndPosition": [
+      "0x31800f: mov rax, qword ptr [rbp + 0x190]",
+      "0x318016: mov rdi, qword ptr [rsp + 0x50]",
+      "0x31801b: mov rcx, qword ptr [rax]",
+      "0x31801e: call 0x9b2a20",
+      "0x318023: mov rdx, rax",
+      "0x318026: lea rcx, [rbp - 0x10]",
+      "0x31802a: mov r9d, r14d",
+      "0x31802d: mov r8, rdi",
+      "0x318030: call 0x9a5860",
+      "0x318035: mov rax, qword ptr [rax]",
+      "0x318038: test rax, rax",
+      "0x31803b: je 0x318086",
+      "0x31803d: shufps xmm6, xmm6, 0xd2",
+      "0x318041: xorps xmm1, xmm1",
+      "0x318044: cvtsi2ss xmm1, qword ptr [rax]",
+      "0x318049: xorps xmm2, xmm2",
+      "0x31804c: xorps xmm0, xmm0",
+      "0x31804f: cvtsi2ss xmm2, qword ptr [rax + 8]",
+      "0x318055: cvtsi2ss xmm0, qword ptr [rax + 0x10]",
+      "0x31805b: mulss xmm1, xmm8",
+      "0x318060: mulss xmm2, xmm8",
+      "0x318065: movss xmm6, xmm1",
+      "0x318069: mulss xmm0, xmm8",
+      "0x31806e: shufps xmm6, xmm6, 0x27",
+      "0x318072: movss xmm6, xmm2",
+      "0x318076: shufps xmm6, xmm6, 0x39"
+    ],
+    "basicInfoSlot": [
+      "0x3b1800: lea eax, [rdx - 1]",
+      "0x3b1803: cmp eax, 0x3fe",
+      "0x3b1808: ja 0x3b1827",
+      "0x3b180a: lea r9, [rax + rax*4]",
+      "0x3b180e: shl r9, 5",
+      "0x3b1812: cmp dword ptr [r9 + r8], edx",
+      "0x3b1816: jne 0x3b1827",
+      "0x3b1818: movzx eax, byte ptr [r9 + r8 + 0x9d]",
+      "0x3b1821: mov byte ptr [rcx], al",
+      "0x3b1823: mov rax, rcx",
+      "0x3b1826: ret ",
+      "0x3b1827: mov byte ptr [rcx], 0",
+      "0x3b182a: mov rax, rcx",
+      "0x3b182d: ret "
+    ],
+    "localIdAndBasicInfoAccess": [
+      "0x3184f3: mov rdx, qword ptr [rsp + 0x30]",
+      "0x3184f8: mov edx, dword ptr [rdx + 4]",
+      "0x3184fb: test edx, edx",
+      "0x3184fd: je 0x31851d",
+      "0x3184ff: mov r8, qword ptr [rsp + 0x28]",
+      "0x318504: lea rcx, [rbp + 0x198]",
+      "0x31850b: call 0x3b1800",
+      "0x318510: test byte ptr [rbp + 0x198], 0x20"
+    ],
+    "cameraQuaternion": [
+      "0x2b291b: mov rax, qword ptr [rsp + 0x70]",
+      "0x2b2920: movss xmm2, dword ptr [rax + 0x20]",
+      "0x2b2925: movss xmm4, dword ptr [rax + 0x1c]",
+      "0x2b292a: movaps xmm0, xmm2",
+      "0x2b292d: movss xmm5, dword ptr [rax + 0x18]",
+      "0x2b2932: movaps xmm6, xmm4",
+      "0x2b2935: movss xmm3, dword ptr [rax + 0x24]",
+      "0x2b293a: mulss xmm0, xmm12",
+      "0x2b293f: movaps xmm1, xmm3",
+      "0x2b2942: mulss xmm4, xmm12",
+      "0x2b2947: subss xmm6, xmm0",
+      "0x2b294b: mulss xmm1, xmm12",
+      "0x2b2950: movaps xmm0, xmm5",
+      "0x2b2953: mulss xmm0, xmm12",
+      "0x2b2958: addss xmm6, xmm1"
+    ],
+    "getWorld": [
+      "0x9b2a20: mov rax, qword ptr [rcx + 0x30]",
+      "0x9b2a24: ret ",
+      "0x9b2a25: int3 ",
+      "0x9b2a26: int3 ",
+      "0x9b2a27: int3 "
+    ]
+  }
+}

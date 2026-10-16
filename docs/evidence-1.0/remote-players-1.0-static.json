@@ -1,0 +1,70 @@
+{
+  "verification": "static executable disassembly only",
+  "exe_sha256": "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a",
+  "registry": "0x1E10980",
+  "function": "0x3179C0",
+  "record_size": "0x98",
+  "record_fields": {
+    "basic_players": "record[1]",
+    "local_data": "record[2]",
+    "render_transform_lookup": "record[6]"
+  },
+  "local_id_offset": "0x4",
+  "basic_player_stride": "0xA0",
+  "id_range": [
+    1,
+    1023
+  ],
+  "iter_init": "0x9BA5A0",
+  "get_ecs_world": "0x9B2A20",
+  "component_lookup": "0x9A5860",
+  "position_offsets": [
+    "0x0",
+    "0x8",
+    "0x10"
+  ],
+  "windows": {
+    "0x3179c0": "48 89 4C 24 08 55 53 57 41 54 41 55 41 57 48 8D AC 24 A8 FE FF FF",
+    "0x3179dd": "41 B8 98 00 00 00 48 8D 54 24 20 E8 B3 2B 6A 00",
+    "0x31800f": "48 8B 85 90 01 00 00 48 8B 7C 24 50 48 8B 08 E8 FD A9 69 00 48 8B D0 48 8D 4D F0 45 8B CE 4C 8B C7 E8 2B D8 68 00",
+    "0x3184f3": "48 8B 54 24 30 8B 52 04 85 D2 74 1E 4C 8B 44 24 28 48 8D 8D 98 01 00 00 E8 F0 92 09 00",
+    "0x3b1800": "8D 42 FF 3D FE 03 00 00 77 1D 4C 8D 0C 80 49 C1 E1 05 43 39 14 01 75 0F",
+    "0x9b2a20": "48 8B 41 30 C3"
+  },
+  "limitations": [
+    "static type identity and field disassembly do not prove actual multiplayer display",
+    "game client must expose remote transform; full-world tracking not proven"
+  ],
+  "type_identity": {
+    "registry_read_singletons": {
+      "pointer_rva": "0x1E10858",
+      "count": 3,
+      "names": [
+        "BasicPlayerInfos",
+        "LocalPlayerData",
+        "g38_items::ItemRegistry"
+      ]
+    },
+    "registry_write_singletons": {
+      "pointer_rva": "0x1E10888",
+      "count": 2,
+      "names": [
+        "G38UiPlayData",
+        "g38_items::ItemOrders"
+      ]
+    },
+    "registry_lookup_components": {
+      "pointer_rva": "0x1E108A8",
+      "count": 1,
+      "name": "RenderTransform",
+      "name_pointer_va": "0x141C8C618"
+    },
+    "camera_read_components": {
+      "pointer_rva": "0x1E00F68",
+      "second_entry_rva": "0x1E00F78",
+      "name": "RenderTransform",
+      "name_pointer_va": "0x141C8C618"
+    },
+    "conclusion": "remote record[6] lookup uses the same RenderTransform type as camera record[2]; camera disassembly reads quaternion at 0x18/1C/20/24"
+  }
+}
