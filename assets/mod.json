@@ -1,8 +1,8 @@
 {
   "id": "minimap_mod",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "name": "Enshrouded Minimap - Community Edition",
-  "description": "Experimental 1.0 core minimap for Steam build 25966634; advanced feeds unavailable, gameplay validation pending.",
+  "description": "Experimental pinned1.0 core preview with native swapchain recovery and independent diagnostics; gameplay validation pending.",
   "author": "elxokker; community maintenance by Aerox912",
   "authors": [
     "elxokker",

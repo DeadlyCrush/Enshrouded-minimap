@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 #include "client_profile.h"
+#include "diagnostic_log.h"
 
 namespace
 {
@@ -1188,7 +1189,7 @@ namespace
     ModMetaData g_metaData = {
         "minimap_mod",
         "Community-maintained in-game minimap with a world clock, players, pings, waypoints and death markers.",
-        "0.5.8",
+        "0.5.9",
         "elxokker; community maintenance by Aerox912",
         "0.0.3",
         true,
@@ -1206,6 +1207,8 @@ namespace
     std::atomic<uintptr_t> g_pendingVulkanDeviceTable{ 0 };
     using VulkanInitFn = bool (__fastcall*)(void*, void*, void*, void*);
     VulkanInitFn g_release10VulkanInit = nullptr;
+    std::atomic<bool> g_rendererBuildFaulted{ false };
+    std::atomic<bool> g_firstOverlaySubmitLogged{ false };
     Mem::Detour* g_playerCameraTransformHook = nullptr;
     const std::array<std::uint8_t, 18> g_playerCameraTransformExpected = {
         0x40, 0x55, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0xD8, 0xFE, 0xFF, 0xFF,
@@ -1435,8 +1438,12 @@ namespace
 
     void Log(const std::string& message)
     {
-        if (g_modContext != nullptr)
-            g_modContext->Log(message.c_str());
+        WriteDiagnosticLog(message);
+        if (g_modContext != nullptr && g_modContext->Log)
+        {
+            try { g_modContext->Log(message.c_str()); }
+            catch (...) { WriteDiagnosticLog("[Minimap] loader log callback threw; independent log retained"); }
+        }
     }
 
     std::string Hex(uintptr_t value)
@@ -4359,11 +4366,7 @@ namespace
     void __fastcall CaptureRenderPresentFrameHook(void* renderContext, void*, void* swapchainState, void*)
     {
         const DWORD now = GetTickCount();
-        if (now - g_lastRenderFrameSummaryTick < 5000)
-            return;
-
-        g_lastRenderFrameSummaryTick = now;
-
+        // Capture the current frame's root every call; throttle only log output.
         uintptr_t table = 0;
         uintptr_t device = 0;
         uintptr_t graphicsContext = 0;
@@ -4406,8 +4409,9 @@ namespace
             SafeReadValue(reinterpret_cast<uintptr_t>(swapchainState) + 0x118, presentSwapchains);
         }
 
-        if (!g_debugLoggingEnabled.load())
+        if (!g_debugLoggingEnabled.load() || now - g_lastRenderFrameSummaryTick < 5000)
             return;
+        g_lastRenderFrameSummaryTick = now;
 
         std::ostringstream oss;
         oss << "[Minimap] render present frame"
@@ -4579,6 +4583,90 @@ namespace
             return false;
 
         outInfo = *runtime;
+        return true;
+    }
+
+
+    // Pinned 1.0 client only. Read the same native frame list used by present;
+    // match the presented VkSwapchain before trusting metadata. No image-format
+    // or screen-size guesses are permitted.
+    bool ReadRelease10SwapchainMetadata(uintptr_t frame, uintptr_t handle, uintptr_t device,
+        SwapchainRuntimeInfo& result, const char*& reason)
+    {
+        result = {};
+        uintptr_t objects = 0;
+        std::uint64_t count = 0;
+        reason = "frame_list_unavailable";
+        if (!frame || !handle || !device ||
+            !SafeReadValue(frame + 0x338, objects) || !SafeReadValue(frame + 0x340, count))
+            return false;
+        reason = "frame_list_bounds";
+        if (!objects || count == 0 || count > 8) return false;
+        reason = "present_handle_not_in_frame";
+        for (std::uint64_t index = 0; index < count; ++index)
+        {
+            uintptr_t object = 0, candidate = 0;
+            if (!SafeReadValue(objects + index * sizeof(uintptr_t), object) || !object ||
+                !SafeReadValue(object + 0x38, candidate) || candidate != handle) continue;
+            reason = "metadata_unreadable";
+            std::uint8_t format = 0;
+            std::uint32_t width = 0, height = 0;
+            uintptr_t images = 0;
+            std::uint64_t imageCount = 0;
+            if (!SafeReadValue(object + 0x0C, format) ||
+                !SafeReadValue(object + 0x1A8, width) || !SafeReadValue(object + 0x1AC, height) ||
+                !SafeReadValue(object + 0x48, images) || !SafeReadValue(object + 0x50, imageCount))
+                return false;
+            reason = "metadata_bounds";
+            if (format == 0 || format > 146 || width == 0 || height == 0 ||
+                width > 16384 || height > 16384 || !images || imageCount == 0 || imageCount > 16)
+                return false;
+            std::array<uintptr_t,16> handles{};
+            reason = "image_list_unreadable";
+            if (!SafeRead(images, handles.data(), static_cast<std::size_t>(imageCount) * sizeof(uintptr_t)))
+                return false;
+            reason = "invalid_image_handle";
+            for (std::size_t i = 0; i < imageCount; ++i)
+                if (!handles[i] || std::find(handles.begin(), handles.begin() + i, handles[i]) != handles.begin() + i)
+                    return false;
+            result.handle = handle;
+            result.device = device;
+            result.format = format;
+            result.width = width;
+            result.height = height;
+            result.imageCount = static_cast<std::uint32_t>(imageCount);
+            result.minImageCount = result.imageCount;
+            result.images.assign(handles.begin(), handles.begin() + static_cast<std::size_t>(imageCount));
+            reason = "validated_native_frame";
+            return true;
+        }
+        return false;
+    }
+
+    bool RecoverRelease10Swapchain(uintptr_t handle, SwapchainRuntimeInfo& result)
+    {
+        const char* reason = nullptr;
+        const uintptr_t frame = g_lastSwapchainState.load();
+        if (!ReadRelease10SwapchainMetadata(frame, handle, g_lastVulkanDevice.load(), result, reason))
+        {
+            std::ostringstream out;
+            out << "[Minimap] swapchain recovery deferred | reason=" << reason
+                << " | frame=" << Hex(frame) << " | present_handle=" << Hex(handle);
+            LogRendererThrottled(out.str());
+            return false;
+        }
+        {
+            std::lock_guard<std::mutex> lock(g_swapchainMutex);
+            auto* existing = FindSwapchainLocked(handle);
+            if (!existing) { g_swapchains.push_back({}); existing = &g_swapchains.back(); }
+            result.generation = ++g_swapchainGeneration;
+            *existing = result;
+        }
+        std::ostringstream out;
+        out << "[Minimap] recovered live swapchain | handle=" << Hex(handle)
+            << " | format=" << result.format << " | extent=" << result.width << "x" << result.height
+            << " | images=" << result.images.size() << " | source=verified_1.0_native_frame";
+        Log(out.str());
         return true;
     }
 
@@ -8811,22 +8899,48 @@ namespace
         return false;
     }
 
-    bool RecordVulkanMinimapCommandGuarded(std::uint32_t imageIndex)
+    void LogDiagnosticFault(const char* operation, const DiagnosticFault& fault)
+    {
+        std::ostringstream out;
+        out << "[Minimap] EXCEPTION | stage=" << operation << " | code=" << Hex(fault.code)
+            << " | address=" << Hex(fault.address);
+        Log(out.str());
+    }
+
+    bool RecordVulkanMinimapCommandSeh(std::uint32_t imageIndex, DiagnosticFault* fault)
     {
         __try { return RecordVulkanMinimapCommandLocked(imageIndex); }
-        __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+        __except (CaptureDiagnosticFault(GetExceptionInformation(), fault)) { return false; }
+    }
+
+    bool RecordVulkanMinimapCommandGuarded(std::uint32_t imageIndex)
+    {
+        DiagnosticFault fault{};
+        try
         {
+            const bool result = RecordVulkanMinimapCommandSeh(imageIndex, &fault);
+            if (fault.code) LogDiagnosticFault("record_commands", fault);
+            return result;
+        }
+        catch (const std::exception& error)
+        {
+            Log(std::string("[Minimap] C++ EXCEPTION | stage=record_commands | what=") + error.what());
             return false;
         }
     }
 
-    std::int32_t SubmitVulkanMinimapCommandGuarded(void* queue, const VkSubmitInfo* info, void* fence)
+    std::int32_t SubmitVulkanMinimapCommandSeh(void* queue, const VkSubmitInfo* info, void* fence, DiagnosticFault* fault)
     {
         __try { return g_renderer.fns.queueSubmit(queue, 1, info, fence); }
-        __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
-        {
-            return -1000; // Driver access violation, not a Vulkan result.
-        }
+        __except (CaptureDiagnosticFault(GetExceptionInformation(), fault)) { return -1000; }
+    }
+
+    std::int32_t SubmitVulkanMinimapCommandGuarded(void* queue, const VkSubmitInfo* info, void* fence)
+    {
+        DiagnosticFault fault{};
+        const auto result = SubmitVulkanMinimapCommandSeh(queue, info, fence, &fault);
+        if (fault.code) LogDiagnosticFault("queue_submit", fault);
+        return result;
     }
 
     bool SubmitVulkanMinimapFrameLocked(void* queue, const VkPresentInfoKHR& info, std::uint32_t imageIndex, VkPresentInfoKHR& adjustedInfo, const void** adjustedWaitSemaphore)
@@ -8883,6 +8997,35 @@ namespace
         return true;
     }
 
+
+    bool BuildVulkanMinimapRendererSeh(const SwapchainRuntimeInfo& snapshot, DiagnosticFault* fault)
+    {
+        __try { return BuildVulkanMinimapRendererLocked(snapshot); }
+        __except (CaptureDiagnosticFault(GetExceptionInformation(), fault)) { return false; }
+    }
+
+    bool BuildVulkanMinimapRendererGuarded(const SwapchainRuntimeInfo& snapshot)
+    {
+        if (g_rendererBuildFaulted.load()) return false;
+        DiagnosticFault fault{};
+        try
+        {
+            const bool result = BuildVulkanMinimapRendererSeh(snapshot, &fault);
+            if (fault.code)
+            {
+                g_rendererBuildFaulted = true;
+                LogDiagnosticFault("build_renderer", fault);
+            }
+            return result;
+        }
+        catch (const std::exception& error)
+        {
+            g_rendererBuildFaulted = true;
+            Log(std::string("[Minimap] C++ EXCEPTION | stage=build_renderer | what=") + error.what());
+            return false;
+        }
+    }
+
     bool TrySubmitVulkanMinimap(void* queue, const VkPresentInfoKHR& info, uintptr_t firstSwapchain, std::uint32_t imageIndex, VkPresentInfoKHR& adjustedInfo, const void** adjustedWaitSemaphore)
     {
         if (queue == nullptr || firstSwapchain == 0 || info.waitSemaphoreCount > 8)
@@ -8900,27 +9043,22 @@ namespace
             return false;
 
         SwapchainRuntimeInfo snapshot{};
-        if (!TryGetSwapchainSnapshot(firstSwapchain, snapshot))
+        const bool cached = TryGetSwapchainSnapshot(firstSwapchain, snapshot);
+        if (g_release10Profile)
+        {
+            if ((!cached || !snapshot.width || !snapshot.height || !snapshot.format) &&
+                !RecoverRelease10Swapchain(firstSwapchain, snapshot))
+                return false;
+        }
+        else if (!cached)
         {
             snapshot.handle = firstSwapchain;
             snapshot.device = g_lastVulkanDevice.load();
-            if (g_release10Profile)
-            {
-                LogRendererThrottled("[Minimap] 1.0 awaiting captured swapchain creation; toggle window/fullscreen to recreate it");
-                return false; // Do not guess a new client's image format or extent.
-            }
         }
-
-        if (snapshot.device == 0)
-            return false;
-        if (g_release10Profile && (snapshot.width == 0 || snapshot.height == 0 || snapshot.format == 0))
-        {
-            LogRendererThrottled("[Minimap] 1.0 swapchain metadata incomplete; drawing deferred");
-            return false;
-        }
+        if (snapshot.device == 0) return false;
 
         std::lock_guard<std::mutex> lock(g_rendererMutex);
-        if (!BuildVulkanMinimapRendererLocked(snapshot))
+        if (!BuildVulkanMinimapRendererGuarded(snapshot))
             return false;
 
         return SubmitVulkanMinimapFrameLocked(queue, info, imageIndex, adjustedInfo, adjustedWaitSemaphore);
@@ -9162,6 +9300,10 @@ namespace
             TryReadPresentTargets(info, firstSwapchain, imageIndex) &&
             TrySubmitVulkanMinimap(queue, info, firstSwapchain, imageIndex, adjustedInfo, adjustedWaitSemaphore);
 
+        // Log only after Submit has returned successfully. Do not wrap the
+        // whole present hook and fall back to consumed game semaphores.
+        if (canDraw && !g_firstOverlaySubmitLogged.exchange(true))
+            Log("[Minimap] first overlay submission succeeded");
         return originalFn(queue, canDraw ? &adjustedInfo : presentInfo);
     }
 
@@ -9503,11 +9645,13 @@ namespace
         {
             if (!modContext->game.isClient)
             {
-                modContext->Log("[Minimap] client-only mod; skipping load on server");
+                Log("[Minimap] client-only mod; skipping load on server");
                 return;
             }
 
             g_release10Profile = false;
+            g_rendererBuildFaulted = false;
+            g_firstOverlaySubmitLogged = false;
             g_cameraEntityArrayOffset = 0x7E0;
             VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x570;
             VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x580;
@@ -9544,7 +9688,7 @@ namespace
                     !BytesMatchRva(0xFD13D0, present.data(), present.size()) ||
                     !BytesMatchRva(0xFDD960, vulkan.data(), vulkan.size()))
                 {
-                    modContext->Log("[Minimap] 1.0 memory differs from pinned executable; no hooks installed");
+                    Log("[Minimap] 1.0 memory differs from pinned executable; no hooks installed");
                     return;
                 }
                 g_iterInit = reinterpret_cast<IterInitFn>(g_exeBase + 0x9BA5A0);
@@ -9560,15 +9704,15 @@ namespace
                     reinterpret_cast<uintptr_t>(&CaptureRelease10VulkanInit));
                 g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
                 loaded = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
-                modContext->Log("[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
-                modContext->Log("[Minimap] 1.0 core preview: remote markers, waypoints, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
+                Log("[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
+                Log("[Minimap] 1.0 core preview: remote markers, waypoints, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
                 RefreshMinimapConfig(modContext, true);
                 return;
             }
 
             const bool namedClient = IsNamedSystemAt(0x1D43630, "player_camera_transform", 0x2662A0) &&
                 IsNamedSystemAt(0x1D4B0B0, "player_waypoints_ui", 0x2A8370);
-            if (!namedClient) { modContext->Log("[Minimap] unsupported client layout; no guessed hooks installed"); return; }
+            if (!namedClient) { Log("[Minimap] unsupported client layout; no guessed hooks installed"); return; }
             const uintptr_t uiRenderSetupRva = ResolvePatternRvaNear(
                 RVA_LOCAL_PLAYER_UI_RENDER_SETUP,
                 g_localPlayerUiRenderSetupExpected.data(),
@@ -9618,13 +9762,13 @@ namespace
                     oss << "[Minimap] iterator init resolved"
                         << " | preferred=" << Hex(RVA_ITER_INIT)
                         << " | resolved=" << Hex(iterInitRva);
-                    modContext->Log(oss.str().c_str());
+                    Log(oss.str().c_str());
                 }
             }
             else
             {
                 g_iterInit = nullptr;
-                modContext->Log("[Minimap] iterator init unavailable");
+                Log("[Minimap] iterator init unavailable");
             }
 
             if (iterNextRva != 0)
@@ -9636,13 +9780,13 @@ namespace
                     oss << "[Minimap] iterator next resolved"
                         << " | preferred=" << Hex(RVA_ITER_NEXT)
                         << " | resolved=" << Hex(iterNextRva);
-                    modContext->Log(oss.str().c_str());
+                    Log(oss.str().c_str());
                 }
             }
             else
             {
                 g_iterNext = nullptr;
-                modContext->Log("[Minimap] iterator next unavailable");
+                Log("[Minimap] iterator next unavailable");
             }
 
             g_directCameraTrackingSupported = false;
@@ -9653,7 +9797,7 @@ namespace
                     "player_camera_transform (named ECS registry)");
                 g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
                 if (g_directCameraTrackingSupported)
-                    modContext->Log("[Minimap] named local-player camera tracking enabled (client 1076226)");
+                    Log("[Minimap] named local-player camera tracking enabled (client 1076226)");
             }
 
             g_localPlayerUiRenderSetupHook = InstallEntryHook(
@@ -9679,7 +9823,7 @@ namespace
                 g_playerUiDataHook = InstallEntryHook(0x2AF690, g_playerUiDataExpected,
                     reinterpret_cast<void*>(&CapturePlayerUiDataHook), "update_ui_data (remote players)");
             }
-            modContext->Log(g_liveMarkerLayoutSupported
+            Log(g_liveMarkerLayoutSupported
                 ? "[Minimap] live ping and waypoint layout verified (client 1076226)"
                 : "[Minimap] live marker layout unavailable for this client");
 
@@ -9690,7 +9834,7 @@ namespace
                     reinterpret_cast<void*>(&CaptureDaytimeUiHook), "player_daytime_ui (world clock)");
                 g_clockLayoutSupported = g_daytimeUiHook != nullptr;
             }
-            modContext->Log(g_clockLayoutSupported
+            Log(g_clockLayoutSupported
                 ? "[Minimap] world clock layout verified (client 1076226)"
                 : "[Minimap] world clock unavailable for this client");
 
@@ -9700,7 +9844,7 @@ namespace
                 g_weatherSampleHook = InstallWeatherSampleHook(0x29CBF8, 0x9AE790);
                 g_weatherLayoutSupported = g_weatherSampleHook != nullptr;
             }
-            modContext->Log(g_weatherLayoutSupported
+            Log(g_weatherLayoutSupported
                 ? "[Minimap] local weather layout verified (client 1076226)"
                 : "[Minimap] weather unavailable for this client; time-only clock retained");
 
@@ -9711,7 +9855,7 @@ namespace
                 g_liveFogLayoutSupported = g_fogUpdateHook != nullptr;
                 if (g_fogUpdateHook) g_updateFog = reinterpret_cast<UpdateFogFn>(g_exeBase + 0x320E60);
             }
-            modContext->Log(g_liveFogLayoutSupported
+            Log(g_liveFogLayoutSupported
                 ? "[Minimap] live fog-of-war layout verified (client 1076226)"
                 : "[Minimap] exploration unavailable; fog stays opaque while show_fog_of_war is enabled");
 
@@ -9724,10 +9868,10 @@ namespace
                 g_worldMapLayoutSupported = g_clearMapMarkersHook != nullptr;
             }
             g_deathMarkerLayoutSupported = g_deathMarkerLayoutSupported && g_worldMapLayoutSupported;
-            modContext->Log(g_deathMarkerLayoutSupported
+            Log(g_deathMarkerLayoutSupported
                 ? "[Minimap] tombstone marker layout verified (client 1076226)"
                 : "[Minimap] tombstone marker layout unavailable for this client");
-            modContext->Log(g_worldMapLayoutSupported
+            Log(g_worldMapLayoutSupported
                 ? "[Minimap] world-map marker layout verified (client 1076226)"
                 : "[Minimap] world-map marker layout unavailable for this client");
 
@@ -9758,7 +9902,7 @@ namespace
                 << " | marker_visibility_hook=" << (g_mapMarkerVisibilityHook != nullptr ? "ready" : "missing")
                 << " | render_hook=" << (g_renderPresentFrameHook != nullptr ? "ready" : "missing")
                 << " | vulkan_probe=" << (g_vulkanDeviceTableInitHook != nullptr ? "ready" : "missing");
-            modContext->Log(oss.str().c_str());
+            Log(oss.str().c_str());
             loaded = true;
         }
 
@@ -9895,12 +10039,12 @@ namespace
             g_modContext = nullptr;
             active = false;
             loaded = false;
-            modContext->Log("[Minimap] unloaded");
+            Log("[Minimap] unloaded");
         }
 
         void Activate(ModContext* modContext) override
         {
-            if (!loaded) { modContext->Log("[Minimap] unsupported client; activation skipped"); return; }
+            if (!loaded) { Log("[Minimap] unsupported client; activation skipped"); return; }
             RefreshMinimapConfig(modContext, true);
             const bool cameraOk = ActivateHook(g_playerCameraTransformHook);
             ActivateHook(g_playerUiDataHook);
@@ -9936,7 +10080,7 @@ namespace
                 << " | render_hook=" << HookActivationState(g_renderPresentFrameHook)
                 << " | vulkan_probe=" << HookActivationState(g_vulkanDeviceTableInitHook)
                 << " | external_overlay=disabled";
-            modContext->Log(oss.str().c_str());
+            Log(oss.str().c_str());
         }
 
         void Deactivate(ModContext* modContext) override
@@ -9997,7 +10141,7 @@ namespace
             }
             active = false;
             ClearLiveMarkers();
-            modContext->Log("[Minimap] deactivated");
+            Log("[Minimap] deactivated");
         }
 
         void Update(ModContext* modContext) override
@@ -10019,6 +10163,8 @@ namespace
 
 extern "C" __declspec(dllexport) Mod* CreateModInstance()
 {
+    InitializeDiagnosticLog();
+    Log("[Minimap] factory version=0.5.9");
     return new MinimapMod();
 }
 

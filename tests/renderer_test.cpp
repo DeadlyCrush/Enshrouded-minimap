@@ -158,6 +158,110 @@ namespace
 
 int main()
 {
+    // Exercise the native reader with owned memory; no game process or guessed
+    // native pointers are needed to verify bounds and exact-handle selection.
+    {
+        std::array<unsigned char, 0x348> frame{};
+        std::array<unsigned char, 0x1B0> object{};
+        uintptr_t objects[1] = { reinterpret_cast<uintptr_t>(object.data()) };
+        uintptr_t images[2] = { 0xABC100, 0xABC200 };
+        const uintptr_t handle = 0xABC000, device = 0xDEF000;
+        const auto put = [](unsigned char* base, std::size_t offset, const auto& value) {
+            std::memcpy(base + offset, &value, sizeof(value));
+        };
+        const uintptr_t objectList = reinterpret_cast<uintptr_t>(objects);
+        const uintptr_t imageList = reinterpret_cast<uintptr_t>(images);
+        put(frame.data(), 0x338, objectList);
+        put(frame.data(), 0x340, std::uint64_t(1));
+        put(object.data(), 0x38, handle);
+        put(object.data(), 0x0C, std::uint8_t(44));
+        put(object.data(), 0x1A8, std::uint32_t(1920));
+        put(object.data(), 0x1AC, std::uint32_t(1080));
+        put(object.data(), 0x04, std::uint32_t(640));
+        put(object.data(), 0x08, std::uint32_t(480));
+        put(object.data(), 0x48, imageList);
+        put(object.data(), 0x50, std::uint64_t(2));
+        SwapchainRuntimeInfo snapshot{};
+        const char* reason = nullptr;
+        const auto read = [&]() {
+            return ReadRelease10SwapchainMetadata(reinterpret_cast<uintptr_t>(frame.data()),
+                handle, device, snapshot, reason);
+        };
+        Check(read() && snapshot.handle == handle && snapshot.device == device &&
+            snapshot.format == 44 && snapshot.width == 1920 && snapshot.height == 1080 &&
+            snapshot.images == std::vector<uintptr_t>({ images[0], images[1] }) &&
+            std::string(reason) == "validated_native_frame",
+            "native exact-handle metadata uses actual extent instead of old render extent");
+        put(object.data(), 0x38, uintptr_t(handle + 1));
+        Check(!read() && snapshot.handle == 0 && std::string(reason) == "present_handle_not_in_frame",
+            "native metadata refuses another swapchain and clears prior result");
+        put(object.data(), 0x38, handle);
+        put(frame.data(), 0x340, std::uint64_t(9));
+        Check(!read() && std::string(reason) == "frame_list_bounds", "native frame rejects oversized object list");
+        put(frame.data(), 0x340, std::uint64_t(0));
+        Check(!read(), "native frame rejects empty object list");
+        put(frame.data(), 0x340, std::uint64_t(1));
+        put(object.data(), 0x1A8, std::uint32_t(0));
+        Check(!read() && std::string(reason) == "metadata_bounds", "native metadata refuses zero actual extent");
+        put(object.data(), 0x1A8, std::uint32_t(16385));
+        Check(!read(), "native metadata refuses unreasonable extent");
+        put(object.data(), 0x1A8, std::uint32_t(1920));
+        put(object.data(), 0x50, std::uint64_t(17));
+        Check(!read(), "native metadata refuses oversized image list");
+        put(object.data(), 0x50, std::uint64_t(2));
+        images[1] = images[0];
+        Check(!read() && std::string(reason) == "invalid_image_handle", "native metadata refuses duplicate image handles");
+        images[1] = 0;
+        Check(!read(), "native metadata refuses null image handle");
+        images[1] = 0xABC200;
+        put(object.data(), 0x48, uintptr_t(1));
+        Check(!read() && std::string(reason) == "image_list_unreadable", "native metadata refuses unreadable image array");
+        put(object.data(), 0x48, imageList);
+        Check(!ReadRelease10SwapchainMetadata(1, handle, device, snapshot, reason),
+            "native metadata safely refuses unreadable frame");
+        g_lastSwapchainState = reinterpret_cast<uintptr_t>(frame.data());
+        g_lastVulkanDevice = device;
+        Check(RecoverRelease10Swapchain(handle, snapshot) && snapshot.generation != 0,
+            "verified native recovery publishes a generation");
+        SwapchainRuntimeInfo cached{};
+        Check(TryGetSwapchainSnapshot(handle, cached) && cached.width == 1920 && cached.format == 44 &&
+            cached.images == snapshot.images, "native recovery cache preserves observed metadata");
+        { std::lock_guard<std::mutex> lock(g_swapchainMutex); g_swapchains.clear(); }
+        g_lastSwapchainState = 0;
+        g_lastVulkanDevice = 0;
+    }
+    {
+        wchar_t directory[MAX_PATH]{}, path[MAX_PATH]{};
+        Check(GetTempPathW(MAX_PATH, directory) != 0 && GetTempFileNameW(directory, L"mmd", 0, path) != 0,
+            "create isolated diagnostic log fixture");
+        InitializeDiagnosticLog(path);
+        WriteDiagnosticLog("renderer-test-known-marker");
+        std::ifstream input(path, std::ios::binary);
+        const std::string text((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        input.close();
+        Check(text.find("diagnostic session started") != std::string::npos &&
+            text.find("renderer-test-known-marker") != std::string::npos &&
+            text.find("local pid=") != std::string::npos && text.find(" tid=") != std::string::npos &&
+            text.size() > 23 && text[4] == '-' && text[7] == '-' && text[13] == ':',
+            "independent append log records session marker local time pid and tid");
+        InitializeDiagnosticLog();
+        Check(DeleteFileW(path) != FALSE, "diagnostic writer closes each append handle");
+        EXCEPTION_RECORD record{};
+        record.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
+        record.ExceptionAddress = reinterpret_cast<void*>(0x12345678);
+        EXCEPTION_POINTERS exception{ &record, nullptr };
+        DiagnosticFault fault{};
+        Check(CaptureDiagnosticFault(&exception, &fault) == EXCEPTION_EXECUTE_HANDLER &&
+            fault.code == EXCEPTION_ACCESS_VIOLATION && fault.address == 0x12345678,
+            "diagnostic SEH filter records access violation code and instruction address");
+        record.ExceptionCode = EXCEPTION_IN_PAGE_ERROR;
+        Check(CaptureDiagnosticFault(&exception, &fault) == EXCEPTION_EXECUTE_HANDLER &&
+            fault.code == EXCEPTION_IN_PAGE_ERROR, "diagnostic SEH filter identifies in-page error");
+        record.ExceptionCode = EXCEPTION_ILLEGAL_INSTRUCTION;
+        Check(CaptureDiagnosticFault(&exception, &fault) == EXCEPTION_CONTINUE_SEARCH &&
+            CaptureDiagnosticFault(nullptr, &fault) == EXCEPTION_CONTINUE_SEARCH,
+            "diagnostic SEH filter does not swallow unrelated exceptions");
+    }
     CheckVulkanFallbackScan();
     VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x580;
     VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x590;
