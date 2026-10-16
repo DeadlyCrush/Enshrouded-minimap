@@ -87,3 +87,11 @@ The 2026-10-16 13:19 KST user session established0.5.8 DLL loading, exact profil
 Independent minimap_mod.log beside enshrouded.exe appends local timestamp/PID/TID and complete messages, independent of the loader shared prefix (some prior Minimap messages were labelled Flight Mod). Narrow SEH leaves record AV/in-page code/address/stage. C++ exceptions in record/build paths are reported separately. No broad catch surrounds a successful GPU submit that could fall back to consumed game semaphores.
 
 New owned-memory tests cover exact handle, actual vs render extent, bounds, unreadable memory, duplicate images, cache publication, log contents/handle close and SEH filtering. A new user run is still required to verify actual0.5.9 recovery and rendering.
+
+## 0.5.10: local selected-waypoint yellow diamond
+
+User confirmed 0.5.9 minimap visibility; selected waypoint was absent because the1.0 capability had intentionally remained disabled. This change enables only the local native PlayerWaypoint reader and existing hollow yellow diamond renderer. Native system0x30e650, record0x30, local data+8/id+4, lookup descriptor+0x18, world getter0x9b2a20 and lookup0x9a5860 are pinned to the already hash-verified client. Enabled byte0 and xyz fixed coordinates+8/+0x10/+0x18 are read directly so pre-system empty UI cache is irrelevant. Selection clear or bad component publishes empty, movement replaces the same marker, and interrupted feeds expire.
+
+The local waypoint capability is separate from the remote-player/ping capability. Config, capture, stale expiry and yellow-diamond rendering are connected without activating old remote-player data. Friend/player display remains NOT connected on1.0: the current0.5.9 run reports show_other_players=0 and remote_player_hook=missing, matching the source gate. Enabling that config alone cannot restore the missing reader.
+
+Owned-memory and CPU rendering regression tests cover local-only capability, empty UI cache, native position/move/disable/unreadable data, original cursor, stale expiry and hollow yellow diamond/visibility toggle. A fresh gameplay setting/move/clear check remains required after0.5.10 installation.

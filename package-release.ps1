@@ -43,7 +43,7 @@ $buildInfo = [ordered]@{
   clientExecutableSha256 = '4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a'
   gameplayVerified = $false
   releaseStatus = 'experimental 1.0 core preview'
-  unavailableFeatures = @('remote players','pings','waypoints','live world markers','tombstones','clock','weather','exploration fog')
+  unavailableFeatures = @('remote players','pings','live world markers','tombstones','clock','weather','exploration fog')
   terrainAssets = 'pre-1.0; new areas not validated'
   dllSha256 = (Get-FileHash -LiteralPath $dll.FullName -Algorithm SHA256).Hash
 }

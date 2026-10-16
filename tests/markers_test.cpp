@@ -24,6 +24,7 @@ namespace
     int lookups = 0;
     unsigned char waypointComponent[0x20] = {};
     bool waypointComponentPresent = true;
+    bool unreadableWaypointComponent = false;
 
     void __fastcall Init(void* ctx, void* data, std::uint32_t size)
     {
@@ -50,7 +51,8 @@ namespace
         if (lookup == 0x9876)
         {
             Check(world == 0xABCD && id == localPlayer[1], "waypoint lookup selects the local player's component");
-            output[0] = waypointComponentPresent ? reinterpret_cast<uintptr_t>(waypointComponent) : 0;
+            output[0] = unreadableWaypointComponent ? uintptr_t(1) :
+                (waypointComponentPresent ? reinterpret_cast<uintptr_t>(waypointComponent) : 0);
             output[1] = sizeof(waypointComponent);
             return output;
         }
@@ -202,6 +204,75 @@ int main(int argc, char** argv)
     TryCaptureWaypointsFromPlayerWaypointsUi(context);
     Check(g_waypoints.empty(), "legacy invalid waypoint count clears snapshot");
     g_liveMarkerLayoutSupported = true;
+
+    // The 1.0 local-only flag must not accidentally opt in legacy remote/ping
+    // structures. Its native component remains authoritative with an empty UI.
+    {
+        g_liveMarkerLayoutSupported = false;
+        g_localWaypointLayoutSupported = true;
+        g_showWaypoints = true;
+        waypointRecord.state = nullptr;
+        waypointRecord.pingEvents = list;
+        waypointRecord.pingInputEvents = list;
+        Put(list, 0x28, std::uint32_t(1));
+        waypointComponent[0] = 1;
+        std::memcpy(waypointComponent + 8, xyz, sizeof(xyz));
+        ClearLiveMarkers();
+        const int beforeLookups = lookups;
+        Check(TryCaptureWaypointsFromPlayerWaypointsUi(context) && CopyWaypoints().size() == 1 &&
+            CopyWaypoints()[0].x == xyz[0] && context[1] == 27,
+            "1.0 local-only native waypoint works with empty UI cache without mutating cursor");
+        Check(lookups == beforeLookups + 1 && g_remotePlayers.empty() && g_pings.empty() &&
+            !ReadRemotePlayers(context, output, count, 0),
+            "local waypoint support does not enable remote player lookups or ping feeds");
+        Put(waypointComponent, 8, WorldToFixed(3950));
+        TryCaptureWaypointsFromPlayerWaypointsUi(context);
+        Check(CopyWaypoints().size() == 1 && CopyWaypoints()[0].x == WorldToFixed(3950),
+            "1.0 local-only waypoint movement replaces the snapshot");
+        waypointComponent[0] = 0;
+        TryCaptureWaypointsFromPlayerWaypointsUi(context);
+        Check(CopyWaypoints().empty(), "1.0 disabled native waypoint clears retained coordinates");
+        waypointComponent[0] = 1;
+        Put(waypointComponent, 8, WorldToFixed(50000));
+        TryCaptureWaypointsFromPlayerWaypointsUi(context);
+        Check(CopyWaypoints().empty(), "1.0 local-only waypoint rejects off-map coordinates");
+        std::memcpy(waypointComponent + 8, xyz, sizeof(xyz));
+        unreadableWaypointComponent = true;
+        TryCaptureWaypointsFromPlayerWaypointsUi(context);
+        Check(CopyWaypoints().empty(), "1.0 unreadable native waypoint is contained and cleared");
+        unreadableWaypointComponent = false;
+        g_lookupComponent = nullptr;
+        TryCaptureWaypointsFromPlayerWaypointsUi(context);
+        Check(CopyWaypoints().empty(), "1.0 missing native lookup never uses a legacy cache fallback");
+        g_lookupComponent = Lookup;
+        TryCaptureWaypointsFromPlayerWaypointsUi(context);
+        g_lastWaypointTick = GetTickCount() - MinimapLive::PlayerStaleMs;
+        Check(CopyWaypoints().empty(), "1.0 interrupted local-only feed expires");
+        TryCaptureWaypointsFromPlayerWaypointsUi(context);
+        VulkanMinimapRenderer localRenderer{};
+        localRenderer.width = localRenderer.height = 128;
+        localRenderer.fns.cmdClearAttachments = Raster;
+        clearCalls = 0;
+        DrawLiveMarkers(localRenderer, nullptr, CopyWaypoints(), FixedToWorld(xyz[0]),
+            FixedToWorld(xyz[2]), 2, 0, 64, 64, 60);
+        Check(clearCalls > 0 && pixels[64][79].r == 1.0f && pixels[64][64].r == 0.2f,
+            "1.0 local-only production draw emits yellow waypoint outline on CPU target");
+        g_showWaypoints = false;
+        clearCalls = 0;
+        DrawLiveMarkers(localRenderer, nullptr, CopyWaypoints(), FixedToWorld(xyz[0]),
+            FixedToWorld(xyz[2]), 2, 0, 64, 64, 60);
+        Check(CopyWaypoints().empty() && clearCalls == 0,
+            "1.0 waypoint visibility toggle removes the production yellow diamond");
+        g_showWaypoints = true;
+        Check(CopyWaypoints().size() == 1, "1.0 visibility toggle preserves fresh native snapshot");
+        for (auto& row : pixels) for (auto& pixel : row) pixel = {};
+        ClearLiveMarkers();
+        waypointRecord.state = state.data();
+        waypointRecord.pingEvents = nullptr;
+        waypointRecord.pingInputEvents = nullptr;
+        g_localWaypointLayoutSupported = false;
+        g_liveMarkerLayoutSupported = true;
+    }
 
     ModContext config{};
     config.config.GetString = [](const char*, const char* key, std::string fallback) {

@@ -1,8 +1,8 @@
 {
   "id": "minimap_mod",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "name": "Enshrouded Minimap - Community Edition",
-  "description": "Experimental pinned1.0 core preview with native swapchain recovery and independent diagnostics; gameplay validation pending.",
+  "description": "Pinned1.0 minimap preview with local yellow waypoint, native swapchain recovery and independent diagnostics.",
   "author": "elxokker; community maintenance by Aerox912",
   "authors": [
     "elxokker",

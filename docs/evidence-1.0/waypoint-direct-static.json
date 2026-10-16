@@ -1,0 +1,40 @@
+{
+  "verification": "static disassembly, not runtime",
+  "recommended_path": "entry hook native local PlayerWaypoint lookup; do not use pre-system UI cache",
+  "rvas": {
+    "waypoint_system": "30e650",
+    "get_ecs_world": "9b2a20",
+    "lookup_component": "9a5860"
+  },
+  "record": {
+    "size": "30",
+    "local_player_data": "08",
+    "state": "10",
+    "lookup_context": "18"
+  },
+  "native_component": {
+    "enabled": "00",
+    "fixed_xyz": [
+      "08",
+      "10",
+      "18"
+    ]
+  },
+  "sequence_evidence": {
+    "local_id": "30e81c mov r12,[rsp+50] (ping feed); 30e80f mov rbx,[rsp+38];30e821 mov ebx,[rbx+4]",
+    "get_world": "30e697 mov rcx,[r14];30e6a2 call9b2a20",
+    "lookup": "30e6aa rcx=&result;30e6af r9d=entityId;30e6b2 r8=lookup;30e6b5 call9a5860",
+    "component_enabled": "30e6c2 cmp byte ptr[rdx],0",
+    "component_xyz": "30e6da read[rdx+8]16bytes;30e6de read[rdx+18]8bytes"
+  },
+  "tests": [
+    "1.0 entry cache empty but native component enabled publishes yellow waypoint",
+    "toggle component disabled publishes empty and clears stale marker",
+    "change native xyz and second hook moves same marker, no accumulating copies",
+    "lookup missing/unreadable/NaN or off-map coordinates fail closed",
+    "original iterator ctx cursor remains unchanged",
+    "1.0 local capability true with remote/ping false still publishes local only",
+    "legacy local waypoint remains supported",
+    "g_showWaypoints false hides CopyWaypoints; re-enable restores captured state"
+  ]
+}

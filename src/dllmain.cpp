@@ -1189,7 +1189,7 @@ namespace
     ModMetaData g_metaData = {
         "minimap_mod",
         "Community-maintained in-game minimap with a world clock, players, pings, waypoints and death markers.",
-        "0.5.9",
+        "0.5.10",
         "elxokker; community maintenance by Aerox912",
         "0.0.3",
         true,
@@ -1233,6 +1233,7 @@ namespace
     std::vector<MinimapLive::Marker> g_pings;
     std::atomic<DWORD> g_lastWaypointTick{ 0 };
     bool g_liveMarkerLayoutSupported = false;
+    bool g_localWaypointLayoutSupported = false;
     Mem::Detour* g_playerUiDataHook = nullptr;
     Mem::Detour* g_clearMapMarkersHook = nullptr;
     Mem::Detour* g_daytimeUiHook = nullptr;
@@ -1762,7 +1763,7 @@ namespace
         const int previousMaxIcons = g_minimapMaxDrawnPoints.exchange(maxIcons);
         const bool showPlayers = !g_release10Profile && ReadMarkerVisibility(modContext, "show_other_players");
         const bool showPings = !g_release10Profile && ReadMarkerVisibility(modContext, "show_pings");
-        const bool showWaypoints = !g_release10Profile && ReadMarkerVisibility(modContext, "show_waypoints");
+        const bool showWaypoints = (!g_release10Profile || g_localWaypointLayoutSupported) && ReadMarkerVisibility(modContext, "show_waypoints");
         const bool showDeaths = !g_release10Profile && ReadMarkerVisibility(modContext, "show_death_markers");
         const bool showClock = !g_release10Profile && ReadMarkerVisibility(modContext, "show_clock");
         const bool previousClock = g_showClock.exchange(showClock);
@@ -4164,7 +4165,7 @@ namespace
 
     bool TryReadLocalWaypoint(void* ctx, const WaypointsUiIterationRecord& record, CapturedWaypoint& waypoint)
     {
-        if (!g_liveMarkerLayoutSupported || !ctx || !record.unknown8 || !record.lookupContext ||
+        if (!(g_liveMarkerLayoutSupported || g_localWaypointLayoutSupported) || !ctx || !record.unknown8 || !record.lookupContext ||
             !g_getEcsWorld || !g_lookupComponent)
             return false;
         __try
@@ -4219,7 +4220,7 @@ namespace
         }
 
         const DWORD now = GetTickCount();
-        if (!g_debugLoggingEnabled.load())
+        if (!g_debugLoggingEnabled.load() && !(g_localWaypointLayoutSupported && changed))
             return;
 
         if (!changed && now - g_lastSummaryTick < 5000)
@@ -4252,6 +4253,16 @@ namespace
             return false;
         }
 
+        // The 1.0 UI array is rebuilt at system entry. Read the local native
+        // PlayerWaypoint component instead; do not enable legacy ping/player readers.
+        if (g_localWaypointLayoutSupported)
+        {
+            CapturedWaypoint waypoint{};
+            std::vector<CapturedWaypoint> local;
+            if (TryReadLocalWaypoint(ctx, record, waypoint)) local.push_back(waypoint);
+            PublishWaypoints(std::move(local));
+            return true;
+        }
         TryCapturePlayerCameraFromWaypointRecord(record);
 
         std::vector<CapturedNearbyMarker> nearbyMarkers;
@@ -6102,7 +6113,7 @@ namespace
     {
         std::lock_guard<std::mutex> lock(g_waypointMutex);
         if (!g_showWaypoints.load() ||
-            (g_liveMarkerLayoutSupported && GetTickCount() - g_lastWaypointTick.load() >= MinimapLive::PlayerStaleMs))
+            ((g_liveMarkerLayoutSupported || g_localWaypointLayoutSupported) && GetTickCount() - g_lastWaypointTick.load() >= MinimapLive::PlayerStaleMs))
             return {};
         return g_waypoints;
     }
@@ -7604,7 +7615,7 @@ namespace
             visibleMarkerPoints.push_back({ FixedToWorld(marker.x), FixedToWorld(marker.z), ResolveCapturedVisibleMapMarkerKind(marker) });
         }
 
-        if (!g_liveMarkerLayoutSupported)
+        if (!(g_liveMarkerLayoutSupported || g_localWaypointLayoutSupported))
             for (const CapturedWaypoint& waypoint : waypoints)
                 PushWorldPointUnique(points, { FixedToWorld(waypoint.x), FixedToWorld(waypoint.z), ResolveCapturedWaypointKind(waypoint), true });
 
@@ -8516,7 +8527,7 @@ namespace
             project(death.x, death.z, x, y);
             DrawDeathMarker(renderer, commandBuffer, cx, cy, radius, x, y, death.key);
         }
-        if (g_liveMarkerLayoutSupported)
+        if (g_liveMarkerLayoutSupported || g_localWaypointLayoutSupported)
             for (const auto& waypoint : waypoints)
             {
                 int x, y;
@@ -9650,6 +9661,7 @@ namespace
             }
 
             g_release10Profile = false;
+            g_localWaypointLayoutSupported = false;
             g_rendererBuildFaulted = false;
             g_firstOverlaySubmitLogged = false;
             g_cameraEntityArrayOffset = 0x7E0;
@@ -9702,10 +9714,28 @@ namespace
                 g_release10VulkanInit = reinterpret_cast<VulkanInitFn>(g_exeBase + 0xFDD960);
                 g_vulkanDeviceTableInitHook = InstallVerifiedCallHook(0xFBC36A, 0xFDD960,
                     reinterpret_cast<uintptr_t>(&CaptureRelease10VulkanInit));
+                // Validated 1.0 PlayerWaypoint lookup; separate from unported pings.
+                const std::array<std::uint8_t,18> waypointPrefix = {
+                    0x48,0x89,0x5C,0x24,0x18,0x48,0x89,0x6C,0x24,0x20,
+                    0x56,0x57,0x41,0x55,0x41,0x56,0x41,0x57 };
+                const std::uint8_t worldGetter[] = {0x48,0x8B,0x41,0x30,0xC3};
+                const std::uint8_t componentCall[] = {0xE8,0xA6,0x71,0x69,0x00};
+                if (IsNamedSystemAt(0x1E0AF80, "player_waypoints_ui", 0x30E650) &&
+                    BytesMatchRva(0x9B2A20, worldGetter, sizeof(worldGetter)) &&
+                    BytesMatchRva(0x30E6B5, componentCall, sizeof(componentCall)))
+                {
+                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + 0x9B2A20);
+                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + 0x9A5860);
+                    g_playerWaypointsUiHook = InstallEntryHook(0x30E650, waypointPrefix,
+                        reinterpret_cast<void*>(&CaptureWaypointsHook), "1.0 local waypoint component");
+                    g_localWaypointLayoutSupported = g_playerWaypointsUiHook != nullptr;
+                }
+                Log(g_localWaypointLayoutSupported ? "[Minimap] 1.0 local waypoint reader ready; yellow diamond enabled"
+                    : "[Minimap] 1.0 local waypoint reader unavailable");
                 g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
                 loaded = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
                 Log("[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
-                Log("[Minimap] 1.0 core preview: remote markers, waypoints, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
+                Log("[Minimap] 1.0 core preview: remote markers, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
                 RefreshMinimapConfig(modContext, true);
                 return;
             }
@@ -10033,6 +10063,7 @@ namespace
             g_directCameraTrackingSupported = false;
             g_release10VulkanInit = nullptr;
             g_liveMarkerLayoutSupported = false;
+            g_localWaypointLayoutSupported = false;
             g_getEcsWorld = nullptr;
             g_lookupComponent = nullptr;
             ClearLiveMarkers();
@@ -10164,7 +10195,7 @@ namespace
 extern "C" __declspec(dllexport) Mod* CreateModInstance()
 {
     InitializeDiagnosticLog();
-    Log("[Minimap] factory version=0.5.9");
+    Log("[Minimap] factory version=0.5.10");
     return new MinimapMod();
 }
 
