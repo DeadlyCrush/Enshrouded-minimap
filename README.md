@@ -1,11 +1,11 @@
 # Enshrouded Minimap - Community Edition
 
-> **Experimental 0.5.8 / Enshrouded 1.0 core preview (Steam build 25966634).**
+> **Experimental 0.5.9 / Enshrouded 1.0 core preview (Steam build 25966634).**
 > This fork ports local camera tracking and the Vulkan renderer to one exact executable hash.
 > Build/static/synthetic validation is separate from gameplay acceptance, which is pending.
 > Remote players, pings, waypoints, live POIs/tombstones, clock, weather and exploration fog are disabled on this profile.
 > Terrain artwork is the original pre-1.0 asset and has not been updated for new areas.
-> If initial swapchain creation was missed, switch window/fullscreen once after joining a world; the preview refuses guessed image formats.
+> Missed initial creation is recovered from verified native frame metadata. Diagnostics are written to minimap_mod.log beside the game executable.
 > See [1.0 evidence, installation, recovery and verification](docs/compatibility-1.0.md).
 > The full feature descriptions below describe the legacy 1076226 profile, not verified 1.0 features.
 

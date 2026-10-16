@@ -77,3 +77,13 @@ A fresh launch must establish mod registration, exact client profile selection, 
 The initial late-swapchain concern was addressed with the verified post-init CALL wrapper. The images-only snapshot concern was addressed by requiring nonzero captured format/width/height before 1.0 drawing. Config flags for all unavailable feeds are gated. Load resets profile offsets. Independent full-function disassembly found no fifth stack argument for init; caller sets RCX/RDX/R8/R9 and tests AL. This supports the four-pointer/bool wrapper ABI statically.
 
 On this machine installation was attempted but refused before any game-file copy because Enshrouded was running. No new DLL-load or gameplay claim is made. Remote branch creation through the requested GitHub connector returned 403; local commits, a Git bundle and a PR draft are available, but no push or PR is claimed.
+
+## 0.5.9 runtime failure and recovery
+
+The 2026-10-16 13:19 KST user session established0.5.8 DLL loading, exact profile selection, active camera/present/init hooks, hooked Vulkan functions and world-ready local position. Drawing was withheld because initial swapchain creation metadata had been missed. This was an explicit wait, not a caught exception.
+
+0.5.9 recovers metadata from the pinned native frame list+0x338/+0x340. Only an object whose+0x38 handle matches current Present is accepted. Actual Vulkan extent is+0x1a8/+0x1ac (not render output+4/+8), format+0xc is the verified identity conversion1..146, images pointer/count+0x48/+0x50. Reads/counts/ranges/nonzero unique images are checked. Frame roots update every render; logs are throttled. No timing or window toggle is required by the recovery path.
+
+Independent minimap_mod.log beside enshrouded.exe appends local timestamp/PID/TID and complete messages, independent of the loader shared prefix (some prior Minimap messages were labelled Flight Mod). Narrow SEH leaves record AV/in-page code/address/stage. C++ exceptions in record/build paths are reported separately. No broad catch surrounds a successful GPU submit that could fall back to consumed game semaphores.
+
+New owned-memory tests cover exact handle, actual vs render extent, bounds, unreadable memory, duplicate images, cache publication, log contents/handle close and SEH filtering. A new user run is still required to verify actual0.5.9 recovery and rendering.

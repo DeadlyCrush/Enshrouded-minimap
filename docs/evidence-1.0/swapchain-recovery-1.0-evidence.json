@@ -1,0 +1,223 @@
+{
+  "evidence": "Static disassembly only, current binary SHA matches renderer-1.0-evidence.json",
+  "frameState": {
+    "argument": "Original render function R8 retained in R13 at FD140C. R13 is not reassigned before FD1D80.",
+    "arrayOffset": "0x338",
+    "countOffset": "0x340",
+    "countType": "uint64; FD1DAE cmp qword [R15],RDI then FD1E66 mov RSI,qword [R15], R15=R13+340",
+    "arrayElementStride": 8,
+    "arrayDereference": "FD1EB1 mov RAX,[R12], R12=R13+338; FD1EC0 mov RBX,[RAX+R14*8]",
+    "objectHandle": "FD1EED mov RCX,[RBX+38] copied into present handle list"
+  },
+  "swapchainObject": {
+    "handle": {
+      "offset": "0x38",
+      "type": "uint64 / VkSwapchainKHR",
+      "evidence": "FC4999 result-handle read then FC49A4 store [RDI+38]"
+    },
+    "width": {
+      "offset": "0x1A8",
+      "type": "uint32"
+    },
+    "height": {
+      "offset": "0x1AC",
+      "type": "uint32"
+    },
+    "extentEvidence": "FE5F08 saves R10 as qword createOutput+9C; FE5FF8 stores same R10 to VkSwapchainCreateInfo.imageExtent (createOutput+34). Caller success FC49C0 loads [RBP+BC] = createOutput+9C and FC49C7 writes qword object+1A8. Thus native VkSwapchain extent is object+1A8/+1AC. Object+04/+08 is separately transformed rendering extent and can differ on rotated surfaces.",
+    "format": {
+      "offset": "0x0C",
+      "type": "uint8",
+      "allowed": "1..146",
+      "evidence": "FC46B9 MOVZX ECX,[RDI+0C]; FC46DF CALL FDB500; FC46EB writes returned EAX as params+30. FE5FCB reads params+30; FE5FF0 stores VkCreateInfo.imageFormat. FDB500 jump table 0..146 returns exact identity for all cases."
+    },
+    "images": {
+      "offset": "0x48",
+      "type": "pointer to VkImage uint64 array"
+    },
+    "imageCount": {
+      "offset": "0x50",
+      "type": "uint64",
+      "evidence": "FC4B80 MOV EBX,actual VK image count; FC4BAF allocation RBX*8; FC4BD3 store pointer [RDI+48]; FC4BE0 stores RBX to qword [RDI+50]"
+    },
+    "renderExtent": {
+      "widthOffset": "0x04",
+      "heightOffset": "0x08",
+      "warning": "Rendering extent; not native swapchain imageExtent when transform swaps dimensions."
+    }
+  },
+  "formatIdentity": {
+    "functionRva": "0xFDB500",
+    "jumpTableRva": "0xFDBAF4",
+    "entryCount": 147,
+    "allReturnValueEqualsInput": true,
+    "method": "Read uint32 targetRva per index, Capstone decode target beginning MOV EAX,imm or XOR EAX,EAX. Every entry 0..146 returns matching integer."
+  },
+  "validationRecommendations": [
+    "Exact binary profile gate",
+    "frame count <=8 (bounded policy), safe readable array",
+    "Find object whose +38 exactly matches currently presented firstSwapchain",
+    "width/height 1..16384, format1..146, image count1..16",
+    "Copy image array; do not retain game object pointer",
+    "Only replace cache generation when metadata or images differ",
+    "Read state root each render; no 5-second early return before capture",
+    "At every present attempt use current handle match; fail closed on missing data"
+  ],
+  "disassembly": {
+    "frameArgs": [
+      "0xfd1400: mov rbx, qword ptr [r8 + 0x25a8]",
+      "0xfd1407: xor edi, edi",
+      "0xfd1409: mov r12, r9",
+      "0xfd140c: mov r13, r8",
+      "0xfd140f: mov r14, rdx",
+      "0xfd1412: mov r15, rcx",
+      "0xfd1415: test rbx, rbx",
+      "0xfd1418: je 0xfd148d",
+      "0xfd141a: mov rsi, qword ptr [r8 + 0x18]"
+    ],
+    "objectArrayRoot": [
+      "0xfd1d79: cmp qword ptr [r13 + 0x1908], rdi",
+      "0xfd1d80: lea r12, [r13 + 0x338]",
+      "0xfd1d87: je 0xfd1da7",
+      "0xfd1d89: mov rdx, r12",
+      "0xfd1d8c: lea rcx, [rbp + 0x17a8]",
+      "0xfd1d93: call 0x1008b00",
+      "0xfd1d98: mov rax, qword ptr [rbp + 0x17a8]",
+      "0xfd1d9f: test al, al",
+      "0xfd1da1: jne 0xfd2301",
+      "0xfd1da7: lea r15, [r13 + 0x340]",
+      "0xfd1dae: cmp qword ptr [r15], rdi",
+      "0xfd1db1: je 0xfd2241",
+      "0xfd1db7: mov rbx, rdi",
+      "0xfd1dba: mov qword ptr [rbp - 0x10], rdi"
+    ],
+    "objectArrayCount": [
+      "0xfd1e56: lea r15, [r13 + 0x340]",
+      "0xfd1e5d: xor edx, edx",
+      "0xfd1e5f: lea r12, [r13 + 0x338]",
+      "0xfd1e66: mov rsi, qword ptr [r15]",
+      "0xfd1e69: lea rax, [rbp + 0x728]",
+      "0xfd1e70: mov qword ptr [rbp + 0x720], rdx"
+    ],
+    "objectArrayIndexAndHandle": [
+      "0xfd1eab: je 0xfd1f2f",
+      "0xfd1eb1: mov rax, qword ptr [r12]",
+      "0xfd1eb5: lea rdx, [rdi + 1]",
+      "0xfd1eb9: mov qword ptr [rbp + 0x17a8], rdx",
+      "0xfd1ec0: mov rbx, qword ptr [rax + r14*8]",
+      "0xfd1ec4: cmp rdx, rcx",
+      "0xfd1ec7: jbe 0xfd1eed",
+      "0xfd1ec9: test r9, r9",
+      "0xfd1ecc: je 0xfd23ee",
+      "0xfd1ed2: neg rdx",
+      "0xfd1ed5: lea rcx, [rbp + 0x700]",
+      "0xfd1edc: xor r8d, r8d",
+      "0xfd1edf: call r9",
+      "0xfd1ee2: mov rdi, qword ptr [rbp + 0x708]",
+      "0xfd1ee9: test al, al",
+      "0xfd1eeb: je 0xfd1f0d",
+      "0xfd1eed: mov rcx, qword ptr [rbx + 0x38]",
+      "0xfd1ef1: mov rax, qword ptr [rbp + 0x700]",
+      "0xfd1ef8: mov qword ptr [rax + rdi*8], rcx"
+    ],
+    "extentAndFormatInput": [
+      "0xfc46b2: mov eax, dword ptr [rdi + 0x10]",
+      "0xfc46b5: lea r12, [rdi + 4]",
+      "0xfc46b9: movzx ecx, byte ptr [rdi + 0xc]",
+      "0xfc46bd: lea r13, [rdi + 0xc]",
+      "0xfc46c1: mov dword ptr [rbp - 0x64], eax",
+      "0xfc46c4: movzx eax, byte ptr [rdi + 0xc5]",
+      "0xfc46cb: mov byte ptr [rbp - 0x60], al",
+      "0xfc46ce: movzx eax, byte ptr [rbp + 0x140]",
+      "0xfc46d5: mov byte ptr [rbp - 0x54], al",
+      "0xfc46d8: mov dword ptr [rbp - 0x68], edx",
+      "0xfc46db: mov qword ptr [rbp - 0x5c], r9",
+      "0xfc46df: call 0xfdb500",
+      "0xfc46e4: movzx ecx, byte ptr [rdi + 0xd]",
+      "0xfc46e8: xor r14d, r14d",
+      "0xfc46eb: mov dword ptr [rbp - 0x50], eax",
+      "0xfc46ee: test ecx, ecx",
+      "0xfc46f0: je 0xfc470e"
+    ],
+    "objectExtentHandleStores": [
+      "0xfc4999: mov rax, qword ptr [rbp + 0x18]",
+      "0xfc499d: mov r9d, dword ptr [rbp + 0xb8]",
+      "0xfc49a4: mov qword ptr [rdi + 0x38], rax",
+      "0xfc49a8: mov rax, qword ptr [rbp + 0xc4]",
+      "0xfc49af: mov qword ptr [r12], rax",
+      "0xfc49b3: movzx eax, byte ptr [rbp + 0xcd]"
+    ],
+    "imagesStores": [
+      "0xfc4b7c: mov rdx, qword ptr [rdi + 0x48]",
+      "0xfc4b80: mov ebx, dword ptr [rsp + 0x28]",
+      "0xfc4b84: mov r12, qword ptr [r15]",
+      "0xfc4b87: test rdx, rdx",
+      "0xfc4b8a: je 0xfc4b95",
+      "0xfc4b8c: mov rcx, qword ptr [rdi + 0x40]",
+      "0xfc4b90: call 0x8905f0",
+      "0xfc4b95: mov qword ptr [rdi + 0x48], r14",
+      "0xfc4b99: mov qword ptr [rdi + 0x50], r14",
+      "0xfc4b9d: mov qword ptr [rdi + 0x40], r12",
+      "0xfc4ba1: test rbx, rbx",
+      "0xfc4ba4: je 0xfc4be4",
+      "0xfc4ba6: test r12, r12",
+      "0xfc4ba9: je 0xfc4cad",
+      "0xfc4baf: lea rdx, [rbx*8]",
+      "0xfc4bb7: mov byte ptr [rbp + 0x138], r14b",
+      "0xfc4bbe: lea r9, [rbp + 0x138]",
+      "0xfc4bc5: mov r8d, 8",
+      "0xfc4bcb: mov rcx, r12",
+      "0xfc4bce: call 0x87a920",
+      "0xfc4bd3: mov qword ptr [rdi + 0x48], rax",
+      "0xfc4bd7: test rax, rax",
+      "0xfc4bda: je 0xfc4cad",
+      "0xfc4be0: mov qword ptr [rdi + 0x50], rbx",
+      "0xfc4be4: mov rcx, qword ptr [r15 + 8]",
+      "0xfc4be8: lea r8, [rsp + 0x28]",
+      "0xfc4bed: mov r9, qword ptr [rdi + 0x48]",
+      "0xfc4bf1: mov rdx, qword ptr [rdi + 0x38]",
+      "0xfc4bf5: mov rax, qword ptr [rcx + 0x590]",
+      "0xfc4bfc: mov rcx, qword ptr [rcx + 8]",
+      "0xfc4c00: call rax",
+      "0xfc4c02: mov dword ptr [rsp + 0x24], eax"
+    ],
+    "formatToCreateInfo": [
+      "0xfe5fcb: mov edx, dword ptr [r13 + 0x30]",
+      "0xfe5fcf: cmovne r8d, r11d",
+      "0xfe5fd3: mov dword ptr [r15], edx",
+      "0xfe5fd6: mov ecx, dword ptr [r13 + 0x34]",
+      "0xfe5fda: mov dword ptr [r15 + 4], ecx",
+      "0xfe5fde: mov rax, qword ptr [r13 + 0x10]",
+      "0xfe5fe2: mov qword ptr [r15 + 0x20], rax",
+      "0xfe5fe6: mov eax, dword ptr [rbp - 0x7c]",
+      "0xfe5fe9: mov dword ptr [r15 + 0x28], eax",
+      "0xfe5fed: mov eax, dword ptr [rbp + 0x2c]",
+      "0xfe5ff0: mov dword ptr [r15 + 0x2c], edx",
+      "0xfe5ff4: mov dword ptr [r15 + 0x30], ecx"
+    ],
+    "formatConversionEntry": [
+      "0xfdb500: sub rsp, 0x28",
+      "0xfdb504: cmp cl, 0x92",
+      "0xfdb507: ja 0xfdbade",
+      "0xfdb50d: lea rdx, [rip - 0xfdb514]",
+      "0xfdb514: movzx eax, cl",
+      "0xfdb517: mov eax, dword ptr [rdx + rax*4 + 0xfdbaf4]",
+      "0xfdb51e: add rax, rdx",
+      "0xfdb521: jmp rax",
+      "0xfdb523: xor eax, eax",
+      "0xfdb525: add rsp, 0x28",
+      "0xfdb529: ret "
+    ],
+    "selectedExtent": [
+      "0xfe5eeb: mov dword ptr [rbp + 0x138], edx",
+      "0xfe5ef1: shr rax, 0x20",
+      "0xfe5ef5: mov dword ptr [rbp + 0x13c], eax",
+      "0xfe5efb: mov rax, qword ptr [rbp + 0x138]",
+      "0xfe5f02: mov ecx, edx",
+      "0xfe5f04: shl rcx, 0x20",
+      "0xfe5f08: mov qword ptr [r15 + 0x9c], rax",
+      "0xfe5f0f: mov eax, r9d",
+      "0xfe5f12: or rcx, rax",
+      "0xfe5f15: mov qword ptr [r15 + 0xa4], rcx"
+    ]
+  }
+}
