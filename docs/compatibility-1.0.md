@@ -71,3 +71,9 @@ Source milestones are independent commits on `fix/enshrouded-1.0-compat`. Use `g
 ## Runtime acceptance still required
 
 A fresh launch must establish mod registration, exact client profile selection, active camera/present/init hooks and hooked Vulkan create/images/present slots. Then verify terrain, movement, camera turning, F10/F9/F11/zoom, window/fullscreen recreation and exit/rejoin in an actual world. A successful startup log alone is not acceptance. Other installed loader mods have old signature errors in prior logs; they are not changed by this patch.
+
+## Final static critic follow-up
+
+The initial late-swapchain concern was addressed with the verified post-init CALL wrapper. The images-only snapshot concern was addressed by requiring nonzero captured format/width/height before 1.0 drawing. Config flags for all unavailable feeds are gated. Load resets profile offsets. Independent full-function disassembly found no fifth stack argument for init; caller sets RCX/RDX/R8/R9 and tests AL. This supports the four-pointer/bool wrapper ABI statically.
+
+On this machine installation was attempted but refused before any game-file copy because Enshrouded was running. No new DLL-load or gameplay claim is made. Remote branch creation through the requested GitHub connector returned 403; local commits, a Git bundle and a PR draft are available, but no push or PR is claimed.

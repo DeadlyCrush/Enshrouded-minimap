@@ -27,3 +27,5 @@ Evidence files: `installed-pe-observed.json`, `staged-profile-regression.json`, 
 - Confirmed Load resets profile and dynamic offsets, and preview config gates world/remote/ping/waypoint/death/clock/weather/fog flags.
 - Confirmed tests cover wrapper argument forwarding and both bool results, rejection of incomplete table, known SHA-256 abc vector, wrong/missing file hash, and old/new table offset fallback fixtures. These are meaningful isolation tests, not runtime game validation.
 - Residual safety detail sent to root: skipping only an absent swapchain snapshot does not cover an images-only snapshot whose format/extent remain zero. RememberSwapchainImages can create that record without RememberSwapchainCreate. Require nonzero width/height/format for 1.0 before allowing renderer creation; otherwise legacy guessed defaults remain reachable.
+
+Root follow-up: missing AND images-only swapchain snapshots now defer drawing. No format/extent defaults are used by the 1.0 submission path. Static four-argument init ABI cross-check completed; runtime pending.
