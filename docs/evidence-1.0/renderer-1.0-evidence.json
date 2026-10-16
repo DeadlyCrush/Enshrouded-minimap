@@ -1,0 +1,157 @@
+{
+  "binary": "<SteamLibrary>/Enshrouded/enshrouded.exe",
+  "sha256": "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a",
+  "method": "Read-only PE section, RIP-relative named API xref, registry absolute pointers and .pdata unwind ranges. Manual instruction-byte decoding; no runtime validation. Later cross-checked instruction decoding with Capstone.",
+  "render": {
+    "rva": "0xFD13D0",
+    "end": "0xFD24F0",
+    "prologue48": "4c 89 44 24 18 48 89 54 24 10 48 89 4c 24 08 55 53 56 57 41 54 41 55 41 56 41 57 48 8d ac 24 b8 e8 ff ff b8 48 18 00 00 e8 f3 92 35 00 48 2b e0",
+    "renderContextArgument": "RCX; spilled oldRSP+08; recovered [RBP+1790] with RBP=oldRSP-1788",
+    "tableOffset": "0x08",
+    "graphicsOffset": "0x28",
+    "queueStateOffset": "0xDD0",
+    "queueIndexOffset": "0xE34",
+    "queuePresentCallRva": "0xFD2043",
+    "queuePresentBytes": "48 8b 46 28 48 8d 55 90 8b b8 34 0e 00 00 48 8b 88 d0 0d 00 00 48 03 ff 48 8b 46 08 48 8b 0c f9 48 8b 80 a0 05 00 00 ff d0 45",
+    "deviceOffset": "Read VkDevice from validated table+0x08. CreateSwapchain call at FC47D6 loads context+08 table then table+08 device. Context+10 supplies allocator wrapper, so original device read is unsafe.",
+    "swapchainOffsets": "old 0x118/0x120 unverified, absent as 32-bit displacements in function"
+  },
+  "vulkan": {
+    "initRva": "0xFDD960",
+    "initEnd": "0xFE100F",
+    "prologue20": "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8b ec 48 83 ec 58",
+    "moduleOffset": "0x10 verified at FC90C4 surrounding store",
+    "getInstanceProcAddrOffset": "0x18 verified",
+    "getDeviceProcAddrOffset": "0x78 verified call load",
+    "queueSubmitOffset": "0xB8 verified named lookup/store",
+    "createSwapchainOffset": "0x580",
+    "getSwapchainImagesOffset": "0x590",
+    "acquireNextImageOffset": "0x598",
+    "queuePresentOffset": "0x5A0",
+    "apiXrefs": {
+      "vkCreateSwapchainKHR": "0xFE0973",
+      "vkGetSwapchainImagesKHR": "0xFE09AD",
+      "vkAcquireNextImageKHR": "0xFE09CA",
+      "vkQueuePresentKHR": "0xFE09E7"
+    },
+    "namedLookupBytes": "4c 8d 0d 26 c0 db 00 c6 87 78 05 00 00 01 4d 8b c6 48 8d 4d 50 48 8b d7 e8 d0 aa ff ff 4c 8d 0d 21 c0 db 00 48 89 87 80 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 b3 aa ff ff 4c 8d 0d 1c c0 db 00 48 89 87 88 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 96 aa ff ff 4c 8d 0d 17 c0 db 00 48 89 87 90 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 79 aa ff ff 4c 8d 0d 12 c0 db 00 48 89 87 98 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 5c aa ff ff 48 89 87 a0 05 00 00 e9 27 fb ff ff b0",
+    "earlyCaptureWarning": "Entry hook runs before init fills table. Do not require fully initialized table then permanently discard candidate. Queue pending candidate and validate in Update before patch.",
+    "createInstanceOffset": "0x20 verified store FC91C9"
+  },
+  "registry": {
+    "local_player_ui_render_setup": {
+      "recordRva": "0x1DDA570",
+      "functionRva": "0x382760",
+      "recordSize": "0x68"
+    },
+    "player_camera_transform": {
+      "recordRva": "0x1E01010",
+      "functionRva": "0x2B26A0",
+      "recordSize": "0x50"
+    },
+    "player_waypoints_ui": {
+      "recordRva": "0x1E0AF80",
+      "functionRva": "0x30E650",
+      "recordSize": "0x30"
+    }
+  },
+  "iterator": {
+    "initRva": "0x9BA5A0",
+    "nextRva": "0x9B5490"
+  },
+  "existingResolverFailure": {
+    "vulkanPatternTotal": 909,
+    "vulkanNearCount": 393,
+    "wrongVulkanNearest": "0xDD7D00",
+    "wrongRenderNearest": "0xDEF2E0",
+    "wrongUiNearest": "0x3623F7",
+    "uiContainingFunction": "0x3623E0..0x36259D",
+    "implication": "UI match is interior instruction offset +0x17, proving nearest common prologue is not semantic resolution."
+  },
+  "disassembly": {
+    "renderPrologue": [
+      "0xfd13d0: mov qword ptr [rsp + 0x18], r8",
+      "0xfd13d5: mov qword ptr [rsp + 0x10], rdx",
+      "0xfd13da: mov qword ptr [rsp + 8], rcx",
+      "0xfd13df: push rbp",
+      "0xfd13e0: push rbx",
+      "0xfd13e1: push rsi",
+      "0xfd13e2: push rdi",
+      "0xfd13e3: push r12",
+      "0xfd13e5: push r13",
+      "0xfd13e7: push r14",
+      "0xfd13e9: push r15",
+      "0xfd13eb: lea rbp, [rsp - 0x1748]",
+      "0xfd13f3: mov eax, 0x1848",
+      "0xfd13f8: call 0x132a6f0",
+      "0xfd13fd: sub rsp, rax",
+      "0xfd1400: mov rbx, qword ptr [r8 + 0x25a8]",
+      "0xfd1407: xor edi, edi",
+      "0xfd1409: mov r12, r9",
+      "0xfd140c: mov r13, r8",
+      "0xfd140f: mov r14, rdx",
+      "0xfd1412: mov r15, rcx",
+      "0xfd1415: test rbx, rbx",
+      "0xfd1418: je 0xfd148d",
+      "0xfd141a: mov rsi, qword ptr [r8 + 0x18]"
+    ],
+    "renderQueuePresent": [
+      "0xfd1fc2: mov rsi, qword ptr [rbp + 0x1790]",
+      "0xfd1fc9: mov qword ptr [rbp - 0x68], rax",
+      "0xfd1fcd: mov dword ptr [rbp - 0x70], 0x3b9acde9",
+      "0xfd1fd4: mov dword ptr [rsp + 0x50], 0x3ba21919",
+      "0xfd1fdc: mov rax, qword ptr [rsi + 0x28]",
+      "0xfd1fe0: mov ecx, dword ptr [rax + 0xe34]",
+      "0xfd1fe6: mov rbx, qword ptr [rax + 0xdd0]",
+      "0xfd1fed: shl rcx, 4",
+      "0xfd1ff1: add rbx, 8",
+      "0xfd1ff5: add rbx, rcx",
+      "0xfd1ff8: mov rcx, rbx",
+      "0xfd1ffb: call 0x8ac9e0",
+      "0xfd2000: test al, al",
+      "0xfd2002: jne 0xfd2023",
+      "0xfd2004: call 0x8af260",
+      "0xfd2009: mov rcx, rbx",
+      "0xfd200c: call 0x8ac9e0",
+      "0xfd2011: test al, al",
+      "0xfd2013: je 0xfd2004",
+      "0xfd2015: lea r15, [r14 + 0x16e0]",
+      "0xfd201c: lea r13, [r14 + 0x16d8]",
+      "0xfd2023: mov rax, qword ptr [rsi + 0x28]",
+      "0xfd2027: lea rdx, [rbp - 0x70]",
+      "0xfd202b: mov edi, dword ptr [rax + 0xe34]",
+      "0xfd2031: mov rcx, qword ptr [rax + 0xdd0]",
+      "0xfd2038: add rdi, rdi",
+      "0xfd203b: mov rax, qword ptr [rsi + 8]",
+      "0xfd203f: mov rcx, qword ptr [rcx + rdi*8]",
+      "0xfd2043: mov rax, qword ptr [rax + 0x5a0]",
+      "0xfd204a: call rax"
+    ],
+    "createSwapchainCall": [
+      "0xfc47d6: mov rcx, qword ptr [r15 + 8]",
+      "0xfc47da: lea r9, [rbp + 0x18]",
+      "0xfc47de: mov r8, qword ptr [r15 + 0x10]",
+      "0xfc47e2: lea rdx, [rbp + 0x28]",
+      "0xfc47e6: mov rax, qword ptr [rcx + 0x580]",
+      "0xfc47ed: mov rcx, qword ptr [rcx + 8]",
+      "0xfc47f1: mov r8, qword ptr [r8]",
+      "0xfc47f4: call rax"
+    ],
+    "createInstanceStore": [
+      "0xfc91bd: mov rax, qword ptr [rbp - 0x41]",
+      "0xfc91c1: mov byte ptr [rbp + 0x77], r12b",
+      "0xfc91c5: mov byte ptr [rbp + 0x6f], r12b",
+      "0xfc91c9: mov qword ptr [rsi + 0x20], rax"
+    ]
+  },
+  "initialSwapchainCapture": {
+    "recommendedCallsite": "0xFBC36A",
+    "verifiedOriginalTarget": "0xFDD960",
+    "callsiteBytes": "E8 F1 15 02 00",
+    "abi": "bool __fastcall(void* table RCX, void* instance RDX, void* device R8, void* state R9)",
+    "wrapper": "Call original initializer with four unchanged arguments; preserve bool result; if success validate completed table and install Vulkan slot hooks before returning result. Reuse InstallVerifiedCallHook.",
+    "reason": "Init entry runs before pointers are written; deferred Update may miss vkCreateSwapchainKHR. Post-call wrapper observes all initialized slots and returns before next game work.",
+    "lateLoadBoundary": "If device and swapchain already exist before mod activation, this hook cannot recover creation info. Require captured nonzero format, width and height before Vulkan image views/renderpass creation; do not substitute 37 for unknown swapchain format.",
+    "unsupported": "No verified public Vulkan query retrieves VkSwapchain image format from a handle. Existing swapchain context offsets remain unproven."
+  }
+}

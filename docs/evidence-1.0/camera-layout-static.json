@@ -1,0 +1,43 @@
+{
+  "verification": "static disassembly only, no runtime test",
+  "exe_sha256": "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a",
+  "camera": {
+    "function": "0x2B26A0",
+    "record_bytes": "0x50",
+    "iter_init": "0x9BA5A0",
+    "iter_next": "0x9B5490",
+    "entity_array": "ctx[0]+0x828",
+    "player_transform": "record[2]",
+    "local_player_data": "record[3]",
+    "camera_transform": "record[6]",
+    "local_filter": "entity_id==*(uint32_t*)(record[3]+4)",
+    "transform_xyz": [
+      "0x0",
+      "0x8",
+      "0x10"
+    ],
+    "transform_quaternion": [
+      "0x18",
+      "0x1c",
+      "0x20",
+      "0x24"
+    ]
+  },
+  "waypoints": {
+    "function": "0x30E650",
+    "record_bytes": "0x30",
+    "state": "record[2]",
+    "array": "0x4642C0",
+    "count": "0x4642C8",
+    "stride": "0x240",
+    "position": "0x50",
+    "active": "0x68",
+    "nearby_array": "0x2F68",
+    "nearby_count": "0x2F70"
+  },
+  "ui_render": {
+    "function": "0x382760",
+    "record_bytes": "0x68",
+    "warning": "old UI record struct incompatible"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "sha256": "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a",
+  "hooks": {
+    "camera": {
+      "rva": "0x2b26a0",
+      "expected_hex": "40 55 57 48 8d ac 24 b8 fe ff ff 48 81 ec 48 02 00 00"
+    },
+    "present": {
+      "rva": "0xfd13d0",
+      "expected_hex": "4c 89 44 24 18 48 89 54 24 10 48 89 4c 24 08 55"
+    },
+    "vulkan": {
+      "rva": "0xfdd960",
+      "expected_hex": "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8b ec 48 83 ec 58"
+    },
+    "vulkan_callsite": {
+      "rva": "0xfbc36a",
+      "expected_hex": "e8 f1 15 02 00"
+    }
+  }
+}

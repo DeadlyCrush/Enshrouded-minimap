@@ -35,10 +35,16 @@ New-Item -ItemType Directory -Path (Join-Path $stage 'tests') | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'tests\README.md') -Destination (Join-Path $stage 'tests\README.md')
 $buildInfo = [ordered]@{
   version = $version
-  repository = 'https://github.com/Aerox912/Enshrouded-minimap'
+  repository = 'https://github.com/DeadlyCrush/Enshrouded-minimap'
   commit = $commit
   platform = 'Windows x64'
-  testedClientDataRevision = 1076226
+  testedClientDataRevision = $null
+  staticallyValidatedSteamBuild = 25966634
+  clientExecutableSha256 = '4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a'
+  gameplayVerified = $false
+  releaseStatus = 'experimental 1.0 core preview'
+  unavailableFeatures = @('remote players','pings','waypoints','live world markers','tombstones','clock','weather','exploration fog')
+  terrainAssets = 'pre-1.0; new areas not validated'
   dllSha256 = (Get-FileHash -LiteralPath $dll.FullName -Algorithm SHA256).Hash
 }
 $buildInfo | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stage 'build-info.json') -Encoding utf8

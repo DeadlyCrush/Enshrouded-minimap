@@ -1,0 +1,183 @@
+{
+  "verification_level": "static_file_only; no runtime or ABI validation",
+  "captured_utc": "2026-10-16T02:55:54.811851+00:00",
+  "exe": "<SteamLibrary>/Enshrouded/enshrouded.exe",
+  "sha256": "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a",
+  "file_bytes": 35323464,
+  "machine": "0x8664",
+  "image_base": "0x140000000",
+  "pe_timestamp": "0x6ad1080d",
+  "size_of_image": "0x2a19000",
+  "text_sha256": "e76f2aac3abeb227108f79cfcb1626b0b75ddd51fb04190c48d514337e72a565",
+  "sections": [
+    {
+      "name": ".text",
+      "rva": 4096,
+      "virtual_size": 20633712,
+      "raw_size": 20634112,
+      "raw_offset": 1024
+    },
+    {
+      "name": ".rdata",
+      "rva": 20639744,
+      "virtual_size": 12601758,
+      "raw_size": 12601856,
+      "raw_offset": 20635136
+    },
+    {
+      "name": ".data",
+      "rva": 33243136,
+      "virtual_size": 8913640,
+      "raw_size": 111104,
+      "raw_offset": 33236992
+    },
+    {
+      "name": ".pdata",
+      "rva": 42160128,
+      "virtual_size": 872232,
+      "raw_size": 872448,
+      "raw_offset": 33348096
+    },
+    {
+      "name": ".rsrc",
+      "rva": 43032576,
+      "virtual_size": 338336,
+      "raw_size": 338432,
+      "raw_offset": 34220544
+    },
+    {
+      "name": ".reloc",
+      "rva": 43372544,
+      "virtual_size": 530024,
+      "raw_size": 530432,
+      "raw_offset": 34558976
+    },
+    {
+      "name": ".bind",
+      "rva": 43905024,
+      "virtual_size": 234056,
+      "raw_size": 234056,
+      "raw_offset": 35089408
+    }
+  ],
+  "exception_entry_count": 72686,
+  "hooks": {
+    "ui": {
+      "rva": "0x382760",
+      "observed_hex": "40 55 57 48 8d ac 24 28 fc ff ff 48 81",
+      "pdata": [
+        {
+          "begin": "0x382760",
+          "end": "0x3827a0",
+          "unwind": "0x1e90814",
+          "is_entry": true
+        }
+      ]
+    },
+    "camera": {
+      "rva": "0x2b26a0",
+      "observed_hex": "40 55 57 48 8d ac 24 b8 fe ff ff 48 81 ec 48 02 00 00",
+      "pdata": [
+        {
+          "begin": "0x2b26a0",
+          "end": "0x2b26e0",
+          "unwind": "0x1e82648",
+          "is_entry": true
+        }
+      ]
+    },
+    "waypoints": {
+      "rva": "0x30e650",
+      "observed_hex": "48 89 5c 24 18 48 89 6c 24 20 56 57 41 55 41",
+      "pdata": [
+        {
+          "begin": "0x30e650",
+          "end": "0x30e814",
+          "unwind": "0x1e86b74",
+          "is_entry": true
+        }
+      ]
+    },
+    "vulkan_init": {
+      "rva": "0xfdd960",
+      "observed_hex": "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8b",
+      "pdata": [
+        {
+          "begin": "0xfdd960",
+          "end": "0xfe100f",
+          "unwind": "0x1f65704",
+          "is_entry": true
+        }
+      ]
+    },
+    "render": {
+      "rva": "0xfd13d0",
+      "observed_hex": "4c 89 44 24 18 48 89 54 24 10 48 89 4c 24 08 55",
+      "pdata": [
+        {
+          "begin": "0xfd13d0",
+          "end": "0xfd24f0",
+          "unwind": "0x1f673a4",
+          "is_entry": true
+        }
+      ]
+    }
+  },
+  "registry": {
+    "ui": {
+      "rva": "0x1dda570",
+      "name": "local_player_ui_render_setup",
+      "name_matches": true,
+      "length": 28,
+      "function_rva": "0x382760",
+      "function_matches": true
+    },
+    "camera": {
+      "rva": "0x1e01010",
+      "name": "player_camera_transform",
+      "name_matches": true,
+      "length": 23,
+      "function_rva": "0x2b26a0",
+      "function_matches": true
+    },
+    "waypoints": {
+      "rva": "0x1e0af80",
+      "name": "player_waypoints_ui",
+      "name_matches": true,
+      "length": 19,
+      "function_rva": "0x30e650",
+      "function_matches": true
+    }
+  },
+  "vulkan_xrefs": {
+    "vkCreateSwapchainKHR": {
+      "rva": "0xfe0973",
+      "bytes_hex": "4c 8d 0d 26 c0 db 00 c6 87 78 05 00 00 01 4d 8b c6 48 8d 4d 50 48 8b d7 e8 d0 aa ff ff 4c 8d 0d 21 c0 db 00 48 89 87 80 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 b3 aa ff ff 4c 8d 0d 1c c0 db",
+      "referenced_name": "vkCreateSwapchainKHR",
+      "name_matches": true,
+      "table_offset": "0x580"
+    },
+    "vkGetSwapchainImagesKHR": {
+      "rva": "0xfe09ad",
+      "bytes_hex": "4c 8d 0d 1c c0 db 00 48 89 87 88 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 96 aa ff ff 4c 8d 0d 17 c0 db 00 48 89 87 90 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 79 aa ff ff 4c 8d 0d 12 c0 db",
+      "referenced_name": "vkGetSwapchainImagesKHR",
+      "name_matches": true,
+      "table_offset": "0x590"
+    },
+    "vkQueuePresentKHR": {
+      "rva": "0xfe09e7",
+      "bytes_hex": "4c 8d 0d 12 c0 db 00 48 89 87 98 05 00 00 4d 8b c6 48 8d 4d 50 48 8b d7 e8 5c aa ff ff 48 89 87 a0 05 00 00 e9 27 fb ff ff b0 01 e9 5c fb ff ff 4c 8d 0d 32 c0 db 00 c6 87 a8 05 00 00 01 4d 8b",
+      "referenced_name": "vkQueuePresentKHR",
+      "name_matches": true,
+      "table_offset": "0x5a0"
+    }
+  },
+  "independent_profile_checks": {
+    "sha256": true,
+    "camera": true,
+    "present": true,
+    "vulkan": true,
+    "vulkan_callsite": true
+  },
+  "independent_profile_pass": true
+}
