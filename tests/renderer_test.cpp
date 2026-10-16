@@ -115,8 +115,8 @@ namespace
         const uintptr_t table = end - VULKAN_TABLE_QUEUE_PRESENT_OFFSET - sizeof(uintptr_t);
         constexpr uintptr_t module = 0x12340000, proc = 0x56780000;
         for (std::size_t offset : {std::size_t(0x10), std::size_t(0x18), std::size_t(0x20), std::size_t(0x78),
-            VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET, VULKAN_TABLE_QUEUE_PRESENT_OFFSET})
-            *reinterpret_cast<uintptr_t*>(table + offset) = offset == 0x10 ? module : offset == 0x18 ? proc : 1;
+            VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET, VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET, VULKAN_TABLE_QUEUE_PRESENT_OFFSET})
+            *reinterpret_cast<uintptr_t*>(table + offset) = offset == 0x10 ? module : offset == 0x18 ? proc : reinterpret_cast<uintptr_t>(&Setup);
 
         g_vulkanDeviceTable = 0;
         g_vulkanScanCursor = 0;
@@ -159,6 +159,44 @@ namespace
 int main()
 {
     CheckVulkanFallbackScan();
+    VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x580;
+    VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x590;
+    VULKAN_TABLE_ACQUIRE_NEXT_IMAGE_OFFSET = 0x598;
+    VULKAN_TABLE_QUEUE_PRESENT_OFFSET = 0x5A0;
+    CheckVulkanFallbackScan();
+    VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x570;
+    VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x580;
+    VULKAN_TABLE_ACQUIRE_NEXT_IMAGE_OFFSET = 0x588;
+    VULKAN_TABLE_QUEUE_PRESENT_OFFSET = 0x590;
+    std::array<unsigned char, 0x600> incomplete{};
+    g_vulkanDeviceTable = 0;
+    CaptureVulkanDeviceTableInitHook(incomplete.data(), nullptr, nullptr, nullptr);
+    Check(g_vulkanDeviceTable == 0 && g_pendingVulkanDeviceTable == reinterpret_cast<uintptr_t>(incomplete.data()),
+        "uninitialized entry capture stays pending and cannot stop fallback discovery");
+    Check(!TryInstallVulkanTableHooks(reinterpret_cast<uintptr_t>(incomplete.data())) &&
+        g_patchedVulkanDeviceTable == 0, "invalid table does not patch slots");
+    g_pendingVulkanDeviceTable = 0;
+    static void* args[4]{};
+    static bool initResult = false;
+    g_release10VulkanInit = [](void* a, void* b, void* c, void* d) -> bool {
+        args[0]=a; args[1]=b; args[2]=c; args[3]=d; return initResult;
+    };
+    Check(!CaptureRelease10VulkanInit(incomplete.data(), reinterpret_cast<void*>(2), reinterpret_cast<void*>(3), reinterpret_cast<void*>(4)) &&
+        args[0] == incomplete.data() && args[1] == reinterpret_cast<void*>(2) && args[2] == reinterpret_cast<void*>(3) && args[3] == reinterpret_cast<void*>(4),
+        "post-init wrapper preserves four original arguments and failure result");
+    initResult = true;
+    Check(CaptureRelease10VulkanInit(incomplete.data(), nullptr, nullptr, nullptr) && g_patchedVulkanDeviceTable == 0,
+        "post-init wrapper preserves success while refusing an invalid table");
+    g_release10VulkanInit = nullptr;
+    const wchar_t* hashFixture = L"build\\tests\\sha256-fixture.tmp";
+    { std::ofstream fixture(hashFixture, std::ios::binary); fixture << "abc"; }
+    Check(ClientExecutableMatchesSha256(hashFixture, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
+        "executable identity hashing matches independent SHA256 vector");
+    Check(!ClientExecutableMatchesSha256(hashFixture, "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a"),
+        "different executable is rejected");
+    Check(!ClientExecutableMatchesSha256(L"missing-sha256-fixture", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
+        "unreadable executable is rejected");
+    DeleteFileW(hashFixture);
     // Same handle and extent do not establish that cached image views are valid.
     Setup();
     SwapchainRuntimeInfo snapshot{};

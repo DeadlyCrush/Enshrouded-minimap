@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "client_profile.h"
 
 namespace
 {
@@ -61,10 +62,10 @@ namespace
     constexpr DWORD VISIBLE_MAP_MARKER_PRUNE_MS = 2000;
     constexpr std::size_t VULKAN_TABLE_QUEUE_SUBMIT_OFFSET = 0xB8;
     constexpr std::size_t VULKAN_TABLE_GET_DEVICE_PROC_ADDR_OFFSET = 0x78;
-    constexpr std::size_t VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x570;
-    constexpr std::size_t VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x580;
-    constexpr std::size_t VULKAN_TABLE_ACQUIRE_NEXT_IMAGE_OFFSET = 0x588;
-    constexpr std::size_t VULKAN_TABLE_QUEUE_PRESENT_OFFSET = 0x590;
+    std::size_t VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x570;
+    std::size_t VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x580;
+    std::size_t VULKAN_TABLE_ACQUIRE_NEXT_IMAGE_OFFSET = 0x588;
+    std::size_t VULKAN_TABLE_QUEUE_PRESENT_OFFSET = 0x590;
     constexpr std::size_t VULKAN_DEVICE_TABLE_SCAN_LIMIT = 0x900;
     constexpr DWORD WORLD_DATA_STALE_MS = 15000;
     constexpr DWORD SESSION_LOG_POLL_MS = 1000;
@@ -1187,7 +1188,7 @@ namespace
     ModMetaData g_metaData = {
         "minimap_mod",
         "Community-maintained in-game minimap with a world clock, players, pings, waypoints and death markers.",
-        "0.5.7",
+        "0.5.8",
         "elxokker; community maintenance by Aerox912",
         "0.0.3",
         true,
@@ -1200,6 +1201,11 @@ namespace
     IterInitFn g_iterInit = nullptr;
     IterNextFn g_iterNext = nullptr;
     bool g_directCameraTrackingSupported = false;
+    bool g_release10Profile = false;
+    std::size_t g_cameraEntityArrayOffset = 0x7E0;
+    std::atomic<uintptr_t> g_pendingVulkanDeviceTable{ 0 };
+    using VulkanInitFn = bool (__fastcall*)(void*, void*, void*, void*);
+    VulkanInitFn g_release10VulkanInit = nullptr;
     Mem::Detour* g_playerCameraTransformHook = nullptr;
     const std::array<std::uint8_t, 18> g_playerCameraTransformExpected = {
         0x40, 0x55, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0xD8, 0xFE, 0xFF, 0xFF,
@@ -1422,6 +1428,7 @@ namespace
     };
 
     bool TryInstallVulkanTableHooks(uintptr_t table);
+    bool IsValidatedVulkanDeviceTable(uintptr_t table);
     void RestoreVulkanTableHooks();
     bool TryReadMinimapConfigStringFromFile(ModContext* modContext, const char* key, std::string& outValue, std::string& outSource);
     void LogRendererThrottled(const std::string& message);
@@ -1728,7 +1735,7 @@ namespace
         const int mapLight = ParseConfigInteger(configuredMapLight, 55, 0, 100);
         const int smoothing = ParseConfigInteger(configuredSmoothing, 55, 0, 250);
         const bool worldMapStyle = configuredIconStyle != "original";
-        const bool showWorld = ReadMarkerVisibility(modContext, "show_world_markers");
+        const bool showWorld = !g_release10Profile && ReadMarkerVisibility(modContext, "show_world_markers");
         const int previousLight = g_minimapMapLight.exchange(mapLight);
         const int previousSmoothing = g_headingSmoothingMs.exchange(smoothing);
         const bool previousStyle = g_worldMapIconStyle.exchange(worldMapStyle);
@@ -1746,15 +1753,15 @@ namespace
         const bool previousDebugLogging = g_debugLoggingEnabled.exchange(debugLogging);
         const int previousMapSampleStep = g_minimapMapSampleStep.exchange(mapSampleStep);
         const int previousMaxIcons = g_minimapMaxDrawnPoints.exchange(maxIcons);
-        const bool showPlayers = ReadMarkerVisibility(modContext, "show_other_players");
-        const bool showPings = ReadMarkerVisibility(modContext, "show_pings");
-        const bool showWaypoints = ReadMarkerVisibility(modContext, "show_waypoints");
-        const bool showDeaths = ReadMarkerVisibility(modContext, "show_death_markers");
-        const bool showClock = ReadMarkerVisibility(modContext, "show_clock");
+        const bool showPlayers = !g_release10Profile && ReadMarkerVisibility(modContext, "show_other_players");
+        const bool showPings = !g_release10Profile && ReadMarkerVisibility(modContext, "show_pings");
+        const bool showWaypoints = !g_release10Profile && ReadMarkerVisibility(modContext, "show_waypoints");
+        const bool showDeaths = !g_release10Profile && ReadMarkerVisibility(modContext, "show_death_markers");
+        const bool showClock = !g_release10Profile && ReadMarkerVisibility(modContext, "show_clock");
         const bool previousClock = g_showClock.exchange(showClock);
-        const bool showWeather = ReadMarkerVisibility(modContext, "show_weather");
+        const bool showWeather = !g_release10Profile && ReadMarkerVisibility(modContext, "show_weather");
         const bool previousWeather = g_showWeather.exchange(showWeather);
-        const bool showFog = ReadMarkerVisibility(modContext, "show_fog_of_war");
+        const bool showFog = !g_release10Profile && ReadMarkerVisibility(modContext, "show_fog_of_war");
         const bool previousFog = g_showFogOfWar.exchange(showFog);
         const bool previousDeaths = g_showDeathMarkers.exchange(showDeaths);
         const bool previousPlayers = g_showOtherPlayers.exchange(showPlayers);
@@ -3466,7 +3473,7 @@ namespace
                 const auto index = static_cast<std::uint32_t>(privateContext[1]);
                 if (index == 0 || index > 256 || record[3] == 0)
                     return false;
-                const auto entities = *reinterpret_cast<uintptr_t*>(privateContext[0] + 0x7E0);
+                const auto entities = *reinterpret_cast<uintptr_t*>(privateContext[0] + g_cameraEntityArrayOffset);
                 const auto id = *reinterpret_cast<std::uint32_t*>(entities + (index - 1) * 0x10);
                 // Same local-player filter used by player_camera_transform.
                 if (id == *reinterpret_cast<std::uint32_t*>(record[3] + 4))
@@ -4368,26 +4375,32 @@ namespace
         if (renderContext != nullptr)
         {
             SafeReadValue(reinterpret_cast<uintptr_t>(renderContext) + 0x08, table);
-            SafeReadValue(reinterpret_cast<uintptr_t>(renderContext) + 0x10, device);
+            if (g_release10Profile)
+                SafeReadValue(table + 0x08, device);
+            else
+                SafeReadValue(reinterpret_cast<uintptr_t>(renderContext) + 0x10, device);
             SafeReadValue(reinterpret_cast<uintptr_t>(renderContext) + 0x28, graphicsContext);
         }
+
+        if (g_release10Profile && !IsValidatedVulkanDeviceTable(table))
+            return;
 
         g_lastRenderContext.store(reinterpret_cast<uintptr_t>(renderContext));
         g_lastVulkanDevice.store(device);
         g_lastGraphicsContext.store(graphicsContext);
         g_lastSwapchainState.store(reinterpret_cast<uintptr_t>(swapchainState));
 
-        if (table != 0)
+        if (IsValidatedVulkanDeviceTable(table))
             TryInstallVulkanTableHooks(table);
 
         if (graphicsContext != 0)
         {
-            SafeReadValue(graphicsContext + 0xD98, queueState);
-            SafeReadValue(graphicsContext + 0xDFC, queueIndex);
+            SafeReadValue(graphicsContext + (g_release10Profile ? 0xDD0 : 0xD98), queueState);
+            SafeReadValue(graphicsContext + (g_release10Profile ? 0xE34 : 0xDFC), queueIndex);
             g_lastVulkanQueueFamilyIndex.store(queueIndex);
         }
 
-        if (swapchainState != nullptr)
+        if (!g_release10Profile && swapchainState != nullptr)
         {
             SafeReadValue(reinterpret_cast<uintptr_t>(swapchainState) + 0x120, presentCount);
             SafeReadValue(reinterpret_cast<uintptr_t>(swapchainState) + 0x118, presentSwapchains);
@@ -8891,10 +8904,20 @@ namespace
         {
             snapshot.handle = firstSwapchain;
             snapshot.device = g_lastVulkanDevice.load();
+            if (g_release10Profile)
+            {
+                LogRendererThrottled("[Minimap] 1.0 awaiting captured swapchain creation; toggle window/fullscreen to recreate it");
+                return false; // Do not guess a new client's image format or extent.
+            }
         }
 
         if (snapshot.device == 0)
             return false;
+        if (g_release10Profile && (snapshot.width == 0 || snapshot.height == 0 || snapshot.format == 0))
+        {
+            LogRendererThrottled("[Minimap] 1.0 swapchain metadata incomplete; drawing deferred");
+            return false;
+        }
 
         std::lock_guard<std::mutex> lock(g_rendererMutex);
         if (!BuildVulkanMinimapRendererLocked(snapshot))
@@ -9146,7 +9169,7 @@ namespace
     {
         const uintptr_t slot = table + offset;
         uintptr_t current = 0;
-        if (!SafeReadValue(slot, current) || current == 0)
+        if (!SafeReadValue(slot, current) || !IsExecutableAddress(current))
             return false;
 
         const uintptr_t hookAddress = reinterpret_cast<uintptr_t>(hook);
@@ -9170,10 +9193,14 @@ namespace
 
     bool TryInstallVulkanTableHooks(uintptr_t table)
     {
-        if (table == 0)
+        if (!IsValidatedVulkanDeviceTable(table))
             return false;
 
         std::lock_guard<std::mutex> lock(g_vulkanHookMutex);
+        if (g_patchedVulkanDeviceTable.load() != 0 && g_patchedVulkanDeviceTable.load() != table)
+            return false; // Original function pointers belong to one device table.
+        uintptr_t empty = 0;
+        g_vulkanDeviceTable.compare_exchange_strong(empty, table);
         if (g_patchedVulkanDeviceTable.load() == table &&
             g_originalQueuePresent.load() != 0 &&
             g_originalCreateSwapchain.load() != 0 &&
@@ -9259,23 +9286,34 @@ namespace
         uintptr_t getDeviceProcAddr = 0;
         uintptr_t createSwapchain = 0;
         uintptr_t queuePresent = 0;
+        uintptr_t images = 0;
 
         if (!SafeReadValue(candidate + 0x10, module) || module != vulkanModule ||
             !SafeReadValue(candidate + 0x18, getInstanceProcAddr) || getInstanceProcAddr != vkGetInstanceProcAddr ||
             !SafeReadValue(candidate + 0x20, createInstance) ||
             !SafeReadValue(candidate + 0x78, getDeviceProcAddr) ||
             !SafeReadValue(candidate + VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET, createSwapchain) ||
-            !SafeReadValue(candidate + VULKAN_TABLE_QUEUE_PRESENT_OFFSET, queuePresent))
+            !SafeReadValue(candidate + VULKAN_TABLE_QUEUE_PRESENT_OFFSET, queuePresent) ||
+            !SafeReadValue(candidate + VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET, images))
         {
             return false;
         }
 
         return module == vulkanModule &&
             getInstanceProcAddr == vkGetInstanceProcAddr &&
-            createInstance != 0 &&
-            getDeviceProcAddr != 0 &&
-            createSwapchain != 0 &&
-            queuePresent != 0;
+            IsExecutableAddress(createInstance) &&
+            IsExecutableAddress(getDeviceProcAddr) &&
+            IsExecutableAddress(createSwapchain) &&
+            IsExecutableAddress(images) &&
+            IsExecutableAddress(queuePresent);
+    }
+
+    bool IsValidatedVulkanDeviceTable(uintptr_t table)
+    {
+        HMODULE module = GetModuleHandleA("vulkan-1.dll");
+        if (!table || !module) return false;
+        return LooksLikeVulkanDeviceTable(table, reinterpret_cast<uintptr_t>(module),
+            reinterpret_cast<uintptr_t>(GetProcAddress(module, "vkGetInstanceProcAddr")));
     }
 
     bool ScanExistingVulkanDeviceTable(uintptr_t vulkanModule, uintptr_t getInstanceProcAddr,
@@ -9285,7 +9323,7 @@ namespace
         // blocking configuration reloads (including first-person switching).
         if (g_vulkanScanCursor < minimum || g_vulkanScanCursor >= maximum)
             g_vulkanScanCursor = minimum;
-        constexpr std::size_t TABLE_MIN_SIZE = VULKAN_TABLE_QUEUE_PRESENT_OFFSET + sizeof(uintptr_t);
+        const std::size_t TABLE_MIN_SIZE = VULKAN_TABLE_QUEUE_PRESENT_OFFSET + sizeof(uintptr_t);
         const auto started = std::chrono::steady_clock::now();
         const auto expired = [&]() { return std::chrono::steady_clock::now() - started >= std::chrono::milliseconds(2); };
         std::size_t candidates = 0, regions = 0;
@@ -9376,6 +9414,13 @@ namespace
 
     void ProbeVulkanTable()
     {
+        uintptr_t pending = g_pendingVulkanDeviceTable.load();
+        if (pending && IsValidatedVulkanDeviceTable(pending))
+        {
+            uintptr_t empty = 0;
+            g_vulkanDeviceTable.compare_exchange_strong(empty, pending);
+            g_pendingVulkanDeviceTable.compare_exchange_strong(pending, 0);
+        }
         if (g_vulkanDeviceTable.load() == 0)
         {
             const DWORD now = GetTickCount();
@@ -9426,13 +9471,22 @@ namespace
         Log(oss.str());
     }
 
+    bool __fastcall CaptureRelease10VulkanInit(void* table, void* instance, void* device, void* state)
+    {
+        if (!g_release10VulkanInit) return false;
+        const bool result = g_release10VulkanInit(table, instance, device, state);
+        if (result && IsValidatedVulkanDeviceTable(reinterpret_cast<uintptr_t>(table)))
+            TryInstallVulkanTableHooks(reinterpret_cast<uintptr_t>(table));
+        return result;
+    }
+
     void __fastcall CaptureVulkanDeviceTableInitHook(void* table, void*, void*, void*)
     {
         if (table == nullptr)
             return;
 
-        const uintptr_t previous = g_vulkanDeviceTable.exchange(reinterpret_cast<uintptr_t>(table));
-        TryInstallVulkanTableHooks(reinterpret_cast<uintptr_t>(table));
+        // Entry is before initialization; never publish an unvalidated active table.
+        const uintptr_t previous = g_pendingVulkanDeviceTable.exchange(reinterpret_cast<uintptr_t>(table));
         if (previous != reinterpret_cast<uintptr_t>(table))
         {
             std::ostringstream oss;
@@ -9453,14 +9507,68 @@ namespace
                 return;
             }
 
+            g_release10Profile = false;
+            g_cameraEntityArrayOffset = 0x7E0;
+            VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x570;
+            VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x580;
+            VULKAN_TABLE_ACQUIRE_NEXT_IMAGE_OFFSET = 0x588;
+            VULKAN_TABLE_QUEUE_PRESENT_OFFSET = 0x590;
             g_modContext = modContext;
             g_shroudtopiaConfigPath = ResolveShroudtopiaConfigPath(modContext);
             RefreshMinimapConfig(modContext, true);
             g_exeBase = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
             g_exeImageSize = GetImageSize(g_exeBase);
 
+
+            wchar_t executable[MAX_PATH]{};
+            const bool release10 = GetModuleFileNameW(nullptr, executable, MAX_PATH) != 0 &&
+                ClientExecutableMatchesSha256(executable, "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a");
+            if (release10)
+            {
+                g_release10Profile = true;
+                g_cameraEntityArrayOffset = 0x828;
+                VULKAN_TABLE_CREATE_SWAPCHAIN_OFFSET = 0x580;
+                VULKAN_TABLE_GET_SWAPCHAIN_IMAGES_OFFSET = 0x590;
+                VULKAN_TABLE_ACQUIRE_NEXT_IMAGE_OFFSET = 0x598;
+                VULKAN_TABLE_QUEUE_PRESENT_OFFSET = 0x5A0;
+                // Whole instruction prefixes, checked against the pinned executable.
+                const std::array<std::uint8_t,18> camera = {
+                    0x40,0x55,0x57,0x48,0x8D,0xAC,0x24,0xB8,0xFE,0xFF,0xFF,0x48,0x81,0xEC,0x48,0x02,0,0 };
+                const std::array<std::uint8_t,16> present = {
+                    0x4C,0x89,0x44,0x24,0x18,0x48,0x89,0x54,0x24,0x10,0x48,0x89,0x4C,0x24,0x08,0x55 };
+                const std::array<std::uint8_t,20> vulkan = {
+                    0x40,0x55,0x53,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8B,0xEC,0x48,0x83,0xEC,0x58 };
+                if (!IsNamedSystemAt(0x1E01010, "player_camera_transform", 0x2B26A0) ||
+                    !IsNamedSystemAt(0x1DDA570, "local_player_ui_render_setup", 0x382760) ||
+                    !BytesMatchRva(0x2B26A0, camera.data(), camera.size()) ||
+                    !BytesMatchRva(0xFD13D0, present.data(), present.size()) ||
+                    !BytesMatchRva(0xFDD960, vulkan.data(), vulkan.size()))
+                {
+                    modContext->Log("[Minimap] 1.0 memory differs from pinned executable; no hooks installed");
+                    return;
+                }
+                g_iterInit = reinterpret_cast<IterInitFn>(g_exeBase + 0x9BA5A0);
+                g_iterNext = reinterpret_cast<IterNextFn>(g_exeBase + 0x9B5490);
+                g_playerCameraTransformHook = InstallEntryHook(0x2B26A0, camera,
+                    reinterpret_cast<void*>(&CapturePlayerCameraTransformHook), "1.0 local camera");
+                g_renderPresentFrameHook = InstallEntryHook(0xFD13D0, present,
+                    reinterpret_cast<void*>(&CaptureRenderPresentFrameHook), "1.0 present");
+                // Wrap a verified CALL and observe the completed table before
+                // the caller starts creating its swapchain. Preserve its result.
+                g_release10VulkanInit = reinterpret_cast<VulkanInitFn>(g_exeBase + 0xFDD960);
+                g_vulkanDeviceTableInitHook = InstallVerifiedCallHook(0xFBC36A, 0xFDD960,
+                    reinterpret_cast<uintptr_t>(&CaptureRelease10VulkanInit));
+                g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
+                loaded = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
+                modContext->Log("[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
+                modContext->Log("[Minimap] 1.0 core preview: remote markers, waypoints, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
+                RefreshMinimapConfig(modContext, true);
+                return;
+            }
+
             const bool namedClient = IsNamedSystemAt(0x1D43630, "player_camera_transform", 0x2662A0) &&
                 IsNamedSystemAt(0x1D4B0B0, "player_waypoints_ui", 0x2A8370);
+            if (!namedClient) { modContext->Log("[Minimap] unsupported client layout; no guessed hooks installed"); return; }
             const uintptr_t uiRenderSetupRva = ResolvePatternRvaNear(
                 RVA_LOCAL_PLAYER_UI_RENDER_SETUP,
                 g_localPlayerUiRenderSetupExpected.data(),
@@ -9724,6 +9832,8 @@ namespace
                 g_renderPresentFrameHook = nullptr;
             }
 
+            if (g_release10Profile)
+                DestroyCallSiteHook(g_vulkanDeviceTableInitHook);
             if (g_vulkanDeviceTableInitHook != nullptr)
             {
                 g_vulkanDeviceTableInitHook->deactivate();
@@ -9763,6 +9873,7 @@ namespace
             g_lastConfigPollTick = 0;
             g_lastSessionLogPollTick = 0;
             g_vulkanDeviceTable.store(0);
+            g_pendingVulkanDeviceTable.store(0);
             g_lastRenderContext.store(0);
             g_lastVulkanDevice.store(0);
             g_lastGraphicsContext.store(0);
@@ -9776,6 +9887,7 @@ namespace
             g_iterInit = nullptr;
             g_iterNext = nullptr;
             g_directCameraTrackingSupported = false;
+            g_release10VulkanInit = nullptr;
             g_liveMarkerLayoutSupported = false;
             g_getEcsWorld = nullptr;
             g_lookupComponent = nullptr;
@@ -9788,6 +9900,7 @@ namespace
 
         void Activate(ModContext* modContext) override
         {
+            if (!loaded) { modContext->Log("[Minimap] unsupported client; activation skipped"); return; }
             RefreshMinimapConfig(modContext, true);
             const bool cameraOk = ActivateHook(g_playerCameraTransformHook);
             ActivateHook(g_playerUiDataHook);

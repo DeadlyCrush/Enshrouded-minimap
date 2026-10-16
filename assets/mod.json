@@ -1,8 +1,8 @@
 {
   "id": "minimap_mod",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "name": "Enshrouded Minimap - Community Edition",
-  "description": "Community-maintained in-game minimap with live fog of war, a weather clock, players, pings, waypoints and death markers.",
+  "description": "Experimental 1.0 core minimap for Steam build 25966634; advanced feeds unavailable, gameplay validation pending.",
   "author": "elxokker; community maintenance by Aerox912",
   "authors": [
     "elxokker",

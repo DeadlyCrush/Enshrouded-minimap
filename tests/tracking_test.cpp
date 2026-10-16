@@ -11,7 +11,7 @@ namespace
         float quaternion[4];
     } playerTransform, cameraTransform;
 
-    std::array<unsigned char, 0x800> testDescriptor{};
+    std::array<unsigned char, 0x840> testDescriptor{};
     std::uint32_t localPlayerData[2] = { 0, 9 };
     std::uint32_t entityIds[8] = { 7, 0, 0, 0, 9, 0, 0, 0 };
     int nextCalls = 0;
@@ -87,6 +87,7 @@ int main()
     Check(!IsNamedSystemAt(0x40, "player_waypoints_ui", 0x300), "reject wrong system name");
 
     g_directCameraTrackingSupported = true;
+    g_cameraEntityArrayOffset = 0x7E0;
     g_iterInit = TestInit;
     g_iterNext = TestNext;
     const auto ids = reinterpret_cast<uintptr_t>(entityIds);
@@ -113,6 +114,38 @@ int main()
         g_playerPosition.z == playerTransform.position[2] &&
         std::abs(g_playerPosition.headingRadians - 1.5707963f) < 0.0001f,
         "update player center and camera heading independently");
+
+    // Release 1.0 moved the entity array. Leave a readable, nonmatching array
+    // in the legacy slot so this fails if the production reader uses 0x7E0.
+    std::uint32_t unrelatedEntityIds[8] = { 17, 0, 0, 0, 19, 0, 0, 0 };
+    const auto unrelatedIds = reinterpret_cast<uintptr_t>(unrelatedEntityIds);
+    std::memcpy(testDescriptor.data() + 0x7E0, &unrelatedIds, sizeof(unrelatedIds));
+    std::memcpy(testDescriptor.data() + 0x828, &ids, sizeof(ids));
+    g_playerPosition = {};
+    nextCalls = 0;
+    CapturePlayerCameraTransformHook(context, nullptr, nullptr, nullptr);
+    Check(!g_playerPosition.valid && nextCalls == 3,
+        "release 1.0 fixture rejects the old entity-array slot");
+
+    g_release10Profile = true;
+    g_cameraEntityArrayOffset = 0x828;
+    nextCalls = 0;
+    playerTransform.position[0] = WorldToFixed(4100);
+    playerTransform.position[2] = WorldToFixed(2050);
+    cameraTransform = playerTransform;
+    cameraTransform.position[2] += WorldToFixed(5);
+    cameraTransform.quaternion[1] = -0.70710678f;
+    cameraTransform.quaternion[3] = 0.70710678f;
+    CapturePlayerCameraTransformHook(context, nullptr, nullptr, nullptr);
+    Check(g_playerPosition.valid && g_playerPosition.channel == 30 && nextCalls == 2,
+        "release 1.0 camera hook skips remote entity using the new entity array");
+    Check(context[1] == 0,
+        "release 1.0 camera hook leaves the game iterator cursor untouched");
+    Check(g_playerPosition.x == playerTransform.position[0] &&
+        g_playerPosition.z == playerTransform.position[2] &&
+        g_playerPosition.hasHeading &&
+        std::abs(g_playerPosition.headingRadians + 1.5707963f) < 0.0001f,
+        "release 1.0 publishes player position and independent camera rotation");
 
     const auto good = g_playerPosition;
     auto stale = good;
