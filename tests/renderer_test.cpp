@@ -158,6 +158,21 @@ namespace
 
 int main()
 {
+    {
+        MinimapMod rejected;
+        // The loader writes the public SDK flag after Load returns, including
+        // when the plugin rejected the current executable's client profile.
+        rejected.loaded = true;
+        rejected.active = true;
+        rejected.Activate(nullptr);
+        Check(!rejected.active && rejected.loaded,
+            "loader-owned loaded flag cannot activate an uninitialized client profile");
+        rejected.active = true;
+        rejected.Activate(nullptr);
+        Check(!rejected.active && !g_playerCameraTransformHook && !g_renderPresentFrameHook &&
+            !g_vulkanDeviceTableInitHook,
+            "repeated rejected activation cannot enter missing-hook activation path");
+    }
     // Exercise the native reader with owned memory; no game process or guessed
     // native pointers are needed to verify bounds and exact-handle selection.
     {

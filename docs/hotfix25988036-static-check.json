@@ -1,0 +1,104 @@
+{
+  "verification": "static binary and staged constants; no runtime verification",
+  "sha256": "82e5020a8736348cd0374f004b2f5e5ef456b5bd27aa5420df34c7dd241cfeeb",
+  "checks": {
+    "new_hash": true,
+    "old_hash_rejected": true,
+    "camera": true,
+    "present": true,
+    "vulkan": true,
+    "waypointPrefix": true,
+    "remotePrefix": true,
+    "worldGetter": true,
+    "basicStride": true,
+    "player_camera_transform": true,
+    "local_player_ui_render_setup": true,
+    "player_waypoints_ui": true,
+    "update_ui_data": true,
+    "init_call": true,
+    "component_call": true,
+    "iterator_init": true
+  },
+  "registry": {
+    "player_camera_transform": {
+      "rva": "0x1e02290",
+      "name": "player_camera_transform",
+      "function_rva": "0x2b29c0"
+    },
+    "local_player_ui_render_setup": {
+      "rva": "0x1ddb7e0",
+      "name": "local_player_ui_render_setup",
+      "function_rva": "0x382a80"
+    },
+    "player_waypoints_ui": {
+      "rva": "0x1e0c200",
+      "name": "player_waypoints_ui",
+      "function_rva": "0x30e970"
+    },
+    "update_ui_data": {
+      "rva": "0x1e11c00",
+      "name": "update_ui_data",
+      "function_rva": "0x317ce0"
+    }
+  },
+  "pdata": {
+    "camera": [
+      {
+        "begin": "0x2b29c0",
+        "end": "0x2b2a00",
+        "unwind": "0x1e83990",
+        "is_entry": true
+      }
+    ],
+    "present": [
+      {
+        "begin": "0xfd1a10",
+        "end": "0xfd2b30",
+        "unwind": "0x1f68704",
+        "is_entry": true
+      }
+    ],
+    "vulkan": [
+      {
+        "begin": "0xfddfa0",
+        "end": "0xfe164f",
+        "unwind": "0x1f66a64",
+        "is_entry": true
+      }
+    ],
+    "waypointPrefix": [
+      {
+        "begin": "0x30e970",
+        "end": "0x30eb34",
+        "unwind": "0x1e87ebc",
+        "is_entry": true
+      }
+    ],
+    "remotePrefix": [
+      {
+        "begin": "0x317ce0",
+        "end": "0x31828f",
+        "unwind": "0x1e88a68",
+        "is_entry": true
+      }
+    ],
+    "worldGetter": [],
+    "basicStride": []
+  },
+  "init_call": {
+    "rva": "0xfbc9aa",
+    "bytes": "e8 f1 15 02 00",
+    "target": "0xfddfa0"
+  },
+  "component_call": {
+    "rva": "0x30e9d5",
+    "bytes": "e8 46 74 69 00",
+    "target": "0x9a5e20"
+  },
+  "iterator_init": {
+    "rva": "0x317d08",
+    "bytes": "e8 53 2e 6a 00",
+    "target": "0x9bab60"
+  },
+  "pass": true
+}
