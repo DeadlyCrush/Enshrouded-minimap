@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "live_markers.h"
 #include "toggle_notice.h"
 #pragma comment(lib, "gdi32.lib")
@@ -1189,7 +1189,7 @@ namespace
     ModMetaData g_metaData = {
         "minimap_mod",
         "Community-maintained in-game minimap with a world clock, players, pings, waypoints and death markers.",
-        "0.5.11",
+        "0.5.12",
         "elxokker; community maintenance by Aerox912",
         "0.0.3",
         true,
@@ -9670,9 +9670,13 @@ namespace
 
     class MinimapMod : public Mod
     {
+        bool loadReady_ = false;
+        bool rejectionLogged_ = false;
     public:
         void Load(ModContext* modContext) override
         {
+            loadReady_ = false;
+            rejectionLogged_ = false;
             if (!modContext->game.isClient)
             {
                 Log("[Minimap] client-only mod; skipping load on server");
@@ -9700,8 +9704,11 @@ namespace
 
 
             wchar_t executable[MAX_PATH]{};
-            const bool release10 = GetModuleFileNameW(nullptr, executable, MAX_PATH) != 0 &&
-                ClientExecutableMatchesSha256(executable, "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a");
+            const bool haveExecutable = GetModuleFileNameW(nullptr, executable, MAX_PATH) != 0;
+            const bool hotfix = haveExecutable && ClientExecutableMatchesSha256(executable,
+                "82e5020a8736348cd0374f004b2f5e5ef456b5bd27aa5420df34c7dd241cfeeb");
+            const bool release10 = hotfix || (haveExecutable &&
+                ClientExecutableMatchesSha256(executable, "4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a"));
             if (release10)
             {
                 g_release10Profile = true;
@@ -9717,39 +9724,39 @@ namespace
                     0x4C,0x89,0x44,0x24,0x18,0x48,0x89,0x54,0x24,0x10,0x48,0x89,0x4C,0x24,0x08,0x55 };
                 const std::array<std::uint8_t,20> vulkan = {
                     0x40,0x55,0x53,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8B,0xEC,0x48,0x83,0xEC,0x58 };
-                if (!IsNamedSystemAt(0x1E01010, "player_camera_transform", 0x2B26A0) ||
-                    !IsNamedSystemAt(0x1DDA570, "local_player_ui_render_setup", 0x382760) ||
-                    !BytesMatchRva(0x2B26A0, camera.data(), camera.size()) ||
-                    !BytesMatchRva(0xFD13D0, present.data(), present.size()) ||
-                    !BytesMatchRva(0xFDD960, vulkan.data(), vulkan.size()))
+                if (!IsNamedSystemAt((hotfix ? 0x1E02290 : 0x1E01010), "player_camera_transform", (hotfix ? 0x2B29C0 : 0x2B26A0)) ||
+                    !IsNamedSystemAt((hotfix ? 0x1DDB7E0 : 0x1DDA570), "local_player_ui_render_setup", (hotfix ? 0x382A80 : 0x382760)) ||
+                    !BytesMatchRva((hotfix ? 0x2B29C0 : 0x2B26A0), camera.data(), camera.size()) ||
+                    !BytesMatchRva((hotfix ? 0xFD1A10 : 0xFD13D0), present.data(), present.size()) ||
+                    !BytesMatchRva((hotfix ? 0xFDDFA0 : 0xFDD960), vulkan.data(), vulkan.size()))
                 {
                     Log("[Minimap] 1.0 memory differs from pinned executable; no hooks installed");
                     return;
                 }
-                g_iterInit = reinterpret_cast<IterInitFn>(g_exeBase + 0x9BA5A0);
-                g_iterNext = reinterpret_cast<IterNextFn>(g_exeBase + 0x9B5490);
-                g_playerCameraTransformHook = InstallEntryHook(0x2B26A0, camera,
+                g_iterInit = reinterpret_cast<IterInitFn>(g_exeBase + (hotfix ? 0x9BAB60 : 0x9BA5A0));
+                g_iterNext = reinterpret_cast<IterNextFn>(g_exeBase + (hotfix ? 0x9B5A50 : 0x9B5490));
+                g_playerCameraTransformHook = InstallEntryHook((hotfix ? 0x2B29C0 : 0x2B26A0), camera,
                     reinterpret_cast<void*>(&CapturePlayerCameraTransformHook), "1.0 local camera");
-                g_renderPresentFrameHook = InstallEntryHook(0xFD13D0, present,
+                g_renderPresentFrameHook = InstallEntryHook((hotfix ? 0xFD1A10 : 0xFD13D0), present,
                     reinterpret_cast<void*>(&CaptureRenderPresentFrameHook), "1.0 present");
                 // Wrap a verified CALL and observe the completed table before
                 // the caller starts creating its swapchain. Preserve its result.
-                g_release10VulkanInit = reinterpret_cast<VulkanInitFn>(g_exeBase + 0xFDD960);
-                g_vulkanDeviceTableInitHook = InstallVerifiedCallHook(0xFBC36A, 0xFDD960,
+                g_release10VulkanInit = reinterpret_cast<VulkanInitFn>(g_exeBase + (hotfix ? 0xFDDFA0 : 0xFDD960));
+                g_vulkanDeviceTableInitHook = InstallVerifiedCallHook((hotfix ? 0xFBC9AA : 0xFBC36A), (hotfix ? 0xFDDFA0 : 0xFDD960),
                     reinterpret_cast<uintptr_t>(&CaptureRelease10VulkanInit));
                 // Validated 1.0 PlayerWaypoint lookup; separate from unported pings.
                 const std::array<std::uint8_t,18> waypointPrefix = {
                     0x48,0x89,0x5C,0x24,0x18,0x48,0x89,0x6C,0x24,0x20,
                     0x56,0x57,0x41,0x55,0x41,0x56,0x41,0x57 };
                 const std::uint8_t worldGetter[] = {0x48,0x8B,0x41,0x30,0xC3};
-                const std::uint8_t componentCall[] = {0xE8,0xA6,0x71,0x69,0x00};
-                if (IsNamedSystemAt(0x1E0AF80, "player_waypoints_ui", 0x30E650) &&
-                    BytesMatchRva(0x9B2A20, worldGetter, sizeof(worldGetter)) &&
-                    BytesMatchRva(0x30E6B5, componentCall, sizeof(componentCall)))
+                const std::uint8_t componentCall[] = {0xE8, static_cast<std::uint8_t>(hotfix ? 0x46 : 0xA6), static_cast<std::uint8_t>(hotfix ? 0x74 : 0x71),0x69,0x00};
+                if (IsNamedSystemAt((hotfix ? 0x1E0C200 : 0x1E0AF80), "player_waypoints_ui", (hotfix ? 0x30E970 : 0x30E650)) &&
+                    BytesMatchRva((hotfix ? 0x9B2FE0 : 0x9B2A20), worldGetter, sizeof(worldGetter)) &&
+                    BytesMatchRva((hotfix ? 0x30E9D5 : 0x30E6B5), componentCall, sizeof(componentCall)))
                 {
-                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + 0x9B2A20);
-                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + 0x9A5860);
-                    g_playerWaypointsUiHook = InstallEntryHook(0x30E650, waypointPrefix,
+                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + (hotfix ? 0x9B2FE0 : 0x9B2A20));
+                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + (hotfix ? 0x9A5E20 : 0x9A5860));
+                    g_playerWaypointsUiHook = InstallEntryHook((hotfix ? 0x30E970 : 0x30E650), waypointPrefix,
                         reinterpret_cast<void*>(&CaptureWaypointsHook), "1.0 local waypoint component");
                     g_localWaypointLayoutSupported = g_playerWaypointsUiHook != nullptr;
                 }
@@ -9757,20 +9764,20 @@ namespace
                     0x48,0x89,0x4C,0x24,0x08,0x55,0x53,0x57,0x41,0x54,0x41,0x55,0x41,0x57,
                     0x48,0x8D,0xAC,0x24,0xA8,0xFE,0xFF,0xFF };
                 const std::uint8_t remoteRecord[] = {
-                    0x41,0xB8,0x98,0,0,0,0x48,0x8D,0x54,0x24,0x20,0xE8,0xB3,0x2B,0x6A,0 };
+                    0x41,0xB8,0x98,0,0,0,0x48,0x8D,0x54,0x24,0x20,0xE8,static_cast<std::uint8_t>(hotfix ? 0x53 : 0xB3),static_cast<std::uint8_t>(hotfix ? 0x2E : 0x2B),0x6A,0 };
                 const std::uint8_t basicStride[] = {
                     0x8D,0x42,0xFF,0x3D,0xFE,0x03,0,0,0x77,0x1D,0x4C,0x8D,0x0C,0x80,
                     0x49,0xC1,0xE1,0x05,0x43,0x39,0x14,0x01,0x75,0x0F };
-                if (IsNamedSystemAt(0x1E10980, "update_ui_data", 0x3179C0) &&
-                    BytesMatchRva(0x3179DD, remoteRecord, sizeof(remoteRecord)) &&
-                    BytesMatchRva(0x3B1800, basicStride, sizeof(basicStride)) &&
-                    BytesMatchRva(0x9B2A20, worldGetter, sizeof(worldGetter)) &&
-                    BytesMatchRva(0x30E6B5, componentCall, sizeof(componentCall)))
+                if (IsNamedSystemAt((hotfix ? 0x1E11C00 : 0x1E10980), "update_ui_data", (hotfix ? 0x317CE0 : 0x3179C0)) &&
+                    BytesMatchRva((hotfix ? 0x317CFD : 0x3179DD), remoteRecord, sizeof(remoteRecord)) &&
+                    BytesMatchRva((hotfix ? 0x3B1B20 : 0x3B1800), basicStride, sizeof(basicStride)) &&
+                    BytesMatchRva((hotfix ? 0x9B2FE0 : 0x9B2A20), worldGetter, sizeof(worldGetter)) &&
+                    BytesMatchRva((hotfix ? 0x30E9D5 : 0x30E6B5), componentCall, sizeof(componentCall)))
                 {
-                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + 0x9B2A20);
-                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + 0x9A5860);
+                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + (hotfix ? 0x9B2FE0 : 0x9B2A20));
+                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + (hotfix ? 0x9A5E20 : 0x9A5860));
                     g_basicPlayerStride = 0xA0;
-                    g_playerUiDataHook = InstallEntryHook(0x3179C0, remotePrefix,
+                    g_playerUiDataHook = InstallEntryHook((hotfix ? 0x317CE0 : 0x3179C0), remotePrefix,
                         reinterpret_cast<void*>(&CapturePlayerUiDataHook), "1.0 remote player transforms");
                     g_remotePlayerLayoutSupported = g_playerUiDataHook != nullptr;
                 }
@@ -9779,8 +9786,10 @@ namespace
                 Log(g_localWaypointLayoutSupported ? "[Minimap] 1.0 local waypoint reader ready; yellow diamond enabled"
                     : "[Minimap] 1.0 local waypoint reader unavailable");
                 g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
-                loaded = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
-                Log("[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
+                loadReady_ = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
+                loaded = loadReady_;
+                Log(hotfix ? "[Minimap] client profile=1.0 Steam build 25988036; static validated, gameplay unverified"
+                    : "[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
                 Log("[Minimap] 1.0 core preview: pings, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
                 RefreshMinimapConfig(modContext, true);
                 return;
@@ -9979,11 +9988,13 @@ namespace
                 << " | render_hook=" << (g_renderPresentFrameHook != nullptr ? "ready" : "missing")
                 << " | vulkan_probe=" << (g_vulkanDeviceTableInitHook != nullptr ? "ready" : "missing");
             Log(oss.str().c_str());
+            loadReady_ = true;
             loaded = true;
         }
 
         void Unload(ModContext* modContext) override
         {
+            loadReady_ = false;
             g_liveFogLayoutSupported = false;
             DestroyCallSiteHook(g_fogUpdateHook);
             g_updateFog = nullptr;
@@ -10122,7 +10133,14 @@ namespace
 
         void Activate(ModContext* modContext) override
         {
-            if (!loaded) { Log("[Minimap] unsupported client; activation skipped"); return; }
+            // The loader owns Mod::loaded and may set it even after Load rejects a client.
+            if (!loadReady_)
+            {
+                active = false;
+                if (!rejectionLogged_) Log("[Minimap] client initialization rejected; activation skipped until a supported DLL is installed");
+                rejectionLogged_ = true;
+                return;
+            }
             RefreshMinimapConfig(modContext, true);
             const bool cameraOk = ActivateHook(g_playerCameraTransformHook);
             ActivateHook(g_playerUiDataHook);
@@ -10242,7 +10260,7 @@ namespace
 extern "C" __declspec(dllexport) Mod* CreateModInstance()
 {
     InitializeDiagnosticLog();
-    Log("[Minimap] factory version=0.5.11");
+    Log("[Minimap] factory version=0.5.12");
     return new MinimapMod();
 }
 

@@ -1,4 +1,4 @@
-param(
+﻿param(
   [Parameter(Mandatory = $true)][string]$DllPath,
   [Parameter(Mandatory = $true)][string]$OutputDirectory
 )
@@ -39,8 +39,8 @@ $buildInfo = [ordered]@{
   commit = $commit
   platform = 'Windows x64'
   testedClientDataRevision = $null
-  staticallyValidatedSteamBuild = 25966634
-  clientExecutableSha256 = '4d6d43ea4a91e71c82d60b045dde932179c99e32e40657efe374688b2933589a'
+  staticallyValidatedSteamBuild = 25988036
+  clientExecutableSha256 = '82e5020a8736348cd0374f004b2f5e5ef456b5bd27aa5420df34c7dd241cfeeb'
   gameplayVerified = $false
   releaseStatus = 'experimental 1.0 core preview'
   unavailableFeatures = @('pings','live world markers','tombstones','clock','weather','exploration fog')
