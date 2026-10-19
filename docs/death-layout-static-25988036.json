@@ -1,0 +1,42 @@
+{
+  "verification": "static installed-executable disassembly only; runtime unverified",
+  "sha256": "82e5020a8736348cd0374f004b2f5e5ef456b5bd27aa5420df34c7dd241cfeeb",
+  "clear_system": {
+    "registry": "0x1E041D0",
+    "function": "0x2FEE40",
+    "record_size": "0x10",
+    "state": "record[1]",
+    "write_singleton": "G38UiPlayData"
+  },
+  "replicate_system": {
+    "registry": "0x1E0D770",
+    "function": "0x310B10",
+    "read_components": [
+      "MapMarker",
+      "RenderTransform"
+    ],
+    "write_singleton": "G38UiPlayData"
+  },
+  "death_array": "0x3E6A78",
+  "death_count": "0x3E6A80",
+  "marker_stride": "0xA0",
+  "marker_xyz": [
+    "0x10",
+    "0x18",
+    "0x20"
+  ],
+  "marker_key": "0x30",
+  "allocator": "0x2FD340",
+  "windows": {
+    "0x2fee40": "48 83 EC 38 41 B8 10 00 00 00 48 8D 54 24 20",
+    "0x2fee4f": "E8 0C BD 6B 00",
+    "0x2fee69": "48 89 88 58 EA 3B 00",
+    "0x310c69": "B9 78 6A 3E 00 EB 1D",
+    "0x310c8d": "48 03 4D 90 E8 AA C6 FE FF",
+    "0x2fd373": "48 8B 43 08 33 D2 48 8D 0C 80 48 8B 03 48 C1 E1 05 48 03 C1",
+    "0x310e97": "0F 10 07 0F 11 46 10 F2 0F 10 4F 10 F2 0F 11 4E 20",
+    "0x310fdd": "89 46 30",
+    "0x2fee62": "48 89 88 80 6A 3E 00"
+  },
+  "recommendation": "death-only entry snapshot at clear system; independent capability/timestamp; do not enable existing world-map or live-marker capabilities; do not call legacy fixed-stride reader"
+}

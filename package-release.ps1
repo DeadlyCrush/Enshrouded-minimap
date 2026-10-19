@@ -43,7 +43,7 @@ $buildInfo = [ordered]@{
   clientExecutableSha256 = '82e5020a8736348cd0374f004b2f5e5ef456b5bd27aa5420df34c7dd241cfeeb'
   gameplayVerified = $false
   releaseStatus = 'experimental 1.0 core preview'
-  unavailableFeatures = @('pings','live world markers','tombstones','clock','weather','exploration fog')
+  unavailableFeatures = @('pings','live world markers','clock','weather','exploration fog')
   terrainAssets = 'pre-1.0; new areas not validated'
   dllSha256 = (Get-FileHash -LiteralPath $dll.FullName -Algorithm SHA256).Hash
 }

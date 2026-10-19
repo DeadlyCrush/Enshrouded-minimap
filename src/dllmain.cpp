@@ -1189,7 +1189,7 @@ namespace
     ModMetaData g_metaData = {
         "minimap_mod",
         "Community-maintained in-game minimap with a world clock, players, pings, waypoints and death markers.",
-        "0.5.12",
+        "0.5.13",
         "elxokker; community maintenance by Aerox912",
         "0.0.3",
         true,
@@ -1293,6 +1293,11 @@ namespace
     std::vector<CapturedWorldMapMarker> g_deathMarkers;
     std::atomic<bool> g_deathMarkerLayoutSupported{ false };
     DWORD g_worldMapTick = 0;
+    DWORD g_deathMapTick = 0;
+    DWORD g_lastDeathCaptureTick = 0;
+    std::uint64_t g_deathMapSession = 0;
+    Mem::Detour* g_deathMapHook = nullptr;
+    std::size_t g_release10DeathArrayOffset = 0;
     bool g_worldMapValid = false;
     DWORD g_lastWorldMapCaptureTick = 0;
     std::atomic<std::uint64_t> g_worldSessionGeneration{ 0 };
@@ -1768,7 +1773,7 @@ namespace
         const bool showPlayers = (!g_release10Profile || g_remotePlayerLayoutSupported) && ReadMarkerVisibility(modContext, "show_other_players");
         const bool showPings = !g_release10Profile && ReadMarkerVisibility(modContext, "show_pings");
         const bool showWaypoints = (!g_release10Profile || g_localWaypointLayoutSupported) && ReadMarkerVisibility(modContext, "show_waypoints");
-        const bool showDeaths = !g_release10Profile && ReadMarkerVisibility(modContext, "show_death_markers");
+        const bool showDeaths = (!g_release10Profile || g_deathMarkerLayoutSupported) && ReadMarkerVisibility(modContext, "show_death_markers");
         const bool showClock = !g_release10Profile && ReadMarkerVisibility(modContext, "show_clock");
         const bool previousClock = g_showClock.exchange(showClock);
         const bool showWeather = !g_release10Profile && ReadMarkerVisibility(modContext, "show_weather");
@@ -2587,6 +2592,9 @@ namespace
             g_deathMarkers.clear();
             g_worldMapValid = false;
             g_worldMapTick = 0;
+            g_deathMapTick = 0;
+            g_lastDeathCaptureTick = 0;
+            g_deathMapSession = g_worldSessionGeneration.load();
         }
         {
             std::lock_guard<std::mutex> lock(g_liveMarkerMutex);
@@ -3285,8 +3293,28 @@ namespace
             BytesMatchRva(0x29C3F3, stride, sizeof(stride));
     }
 
+    bool HasVerifiedRelease10DeathLayout()
+    {
+        const std::uint8_t init[] = {0xE8,0x0C,0xBD,0x6B,0};
+        const std::uint8_t clear[] = {0x48,0x89,0x88,0x80,0x6A,0x3E,0};
+        const std::uint8_t select[] = {0xB9,0x78,0x6A,0x3E,0,0xEB,0x1D};
+        const std::uint8_t allocate[] = {0x48,0x03,0x4D,0x90,0xE8,0xAA,0xC6,0xFE,0xFF};
+        const std::uint8_t stride[] = {0x48,0x8B,0x43,0x08,0x33,0xD2,0x48,0x8D,0x0C,0x80,0x48,0x8B,0x03,0x48,0xC1,0xE1,0x05,0x48,0x03,0xC1};
+        const std::uint8_t position[] = {0x0F,0x10,0x07,0x0F,0x11,0x46,0x10,0xF2,0x0F,0x10,0x4F,0x10,0xF2,0x0F,0x11,0x4E,0x20};
+        const std::uint8_t key[] = {0x89,0x46,0x30};
+        return IsNamedSystemAt(0x1E041D0, "clear_map_markers_for_ui", 0x2FEE40) &&
+            IsNamedSystemAt(0x1E0D770, "replicate_map_markers_for_ui", 0x310B10) &&
+            reinterpret_cast<uintptr_t>(g_iterInit) == g_exeBase + 0x9BAB60 &&
+            BytesMatchRva(0x2FEE40, g_clearMapMarkersExpected.data(), g_clearMapMarkersExpected.size()) &&
+            BytesMatchRva(0x2FEE4F, init, sizeof(init)) && BytesMatchRva(0x2FEE62, clear, sizeof(clear)) &&
+            BytesMatchRva(0x310C69, select, sizeof(select)) && BytesMatchRva(0x310C8D, allocate, sizeof(allocate)) &&
+            BytesMatchRva(0x2FD373, stride, sizeof(stride)) && BytesMatchRva(0x310E97, position, sizeof(position)) &&
+            BytesMatchRva(0x310FDD, key, sizeof(key));
+    }
+
     bool ReadWorldMapArray(uintptr_t state, std::size_t offset, bool custom,
-        std::vector<CapturedWorldMapMarker>& markers, std::size_t maxEntries = WORLD_MAP_MAX_ENTRIES)
+        std::vector<CapturedWorldMapMarker>& markers, std::size_t maxEntries = WORLD_MAP_MAX_ENTRIES,
+        std::size_t stride = WORLD_MAP_MARKER_STRIDE)
     {
         uintptr_t entries = 0;
         std::uint64_t count = 0;
@@ -3295,11 +3323,11 @@ namespace
             return false;
         if (count == 0) return true; // A valid empty frame removes old markers.
         if (!IsLikelyRuntimePointer(entries)) return false;
-        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(count) * WORLD_MAP_MARKER_STRIDE);
+        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(count) * stride);
         if (!SafeRead(entries, bytes.data(), bytes.size())) return false;
         for (std::size_t i = 0; i < count; ++i)
         {
-            const auto* entry = bytes.data() + i * WORLD_MAP_MARKER_STRIDE;
+            const auto* entry = bytes.data() + i * stride;
             CapturedWorldMapMarker marker{};
             std::memcpy(&marker.x, entry + 0x10, sizeof(marker.x));
             std::memcpy(&marker.y, entry + 0x18, sizeof(marker.y));
@@ -3327,6 +3355,8 @@ namespace
         {
             std::lock_guard<std::mutex> lock(g_worldMapMutex);
             g_deathMarkers = std::move(deaths);
+            g_deathMapTick = now;
+            g_deathMapSession = g_worldSessionGeneration.load();
             g_worldMapMarkers = std::move(markers);
             g_worldMapTick = now;
             g_worldMapValid = valid;
@@ -3353,8 +3383,24 @@ namespace
     {
         if (!g_deathMarkerLayoutSupported || !g_showDeathMarkers.load()) return {};
         std::lock_guard<std::mutex> lock(g_worldMapMutex);
-        if (now - g_worldMapTick > MinimapLive::PlayerStaleMs) return {};
+        if (g_deathMapSession != g_worldSessionGeneration.load() ||
+            now - g_deathMapTick > MinimapLive::PlayerStaleMs) return {};
         return g_deathMarkers;
+    }
+
+    // Death-only snapshots never update the POI validity flag, list, or freshness.
+    bool CaptureRelease10Deaths(uintptr_t state, DWORD now, std::uint64_t session)
+    {
+        std::vector<CapturedWorldMapMarker> deaths;
+        const bool valid = g_deathMarkerLayoutSupported && g_release10DeathArrayOffset &&
+            ReadWorldMapArray(state, g_release10DeathArrayOffset, false, deaths, DEATH_MAP_MAX_ENTRIES, 0xA0);
+        if (!valid) deaths.clear();
+        std::lock_guard<std::mutex> lock(g_worldMapMutex);
+        if (session != g_worldSessionGeneration.load()) return false;
+        g_deathMarkers = std::move(deaths);
+        g_deathMapTick = now;
+        g_deathMapSession = session;
+        return valid;
     }
 
     bool TryInitWorldMapState(void* ctx, uintptr_t& state)
@@ -3365,6 +3411,40 @@ namespace
         __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
         state = record[1];
         return IsLikelyRuntimePointer(state);
+    }
+
+    void __fastcall CaptureRelease10DeathsHook(void* ctx, void*, void*, void*)
+    {
+        if (!g_deathMarkerLayoutSupported) return;
+        const DWORD now = GetTickCount();
+        if (g_lastDeathCaptureTick && now - g_lastDeathCaptureTick < 100) return;
+        g_lastDeathCaptureTick = now;
+        const auto session = g_worldSessionGeneration.load();
+        uintptr_t state = 0;
+        bool valid = false;
+        try
+        {
+            // Copy the completed previous frame before the native clear resets it.
+            TryInitWorldMapState(ctx, state);
+            valid = CaptureRelease10Deaths(state, now, session);
+        }
+        catch (const std::exception& error)
+        {
+            Log((std::string("[Minimap] death snapshot exception: ") + error.what()).c_str());
+            std::lock_guard<std::mutex> lock(g_worldMapMutex);
+            if (session == g_worldSessionGeneration.load()) g_deathMarkers.clear();
+        }
+        static DWORD lastLog = 0;
+        static std::size_t previousCount = static_cast<std::size_t>(-1);
+        std::size_t count;
+        { std::lock_guard<std::mutex> lock(g_worldMapMutex); count = g_deathMarkers.size(); }
+        if (count != previousCount || now - lastLog >= 10000)
+        {
+            previousCount = count; lastLog = now;
+            std::ostringstream message;
+            message << "[Minimap] death feed | read_ok=" << valid << " | count=" << count;
+            Log(message.str().c_str());
+        }
     }
 
     void __fastcall CaptureWorldMapHook(void* ctx, void*, void*, void*)
@@ -9684,6 +9764,8 @@ namespace
             }
 
             g_release10Profile = false;
+            g_deathMarkerLayoutSupported = false;
+            g_release10DeathArrayOffset = 0;
             g_localWaypointLayoutSupported = false;
             g_remotePlayerLayoutSupported = false;
             g_basicPlayerStride = 0x60;
@@ -9785,12 +9867,21 @@ namespace
                     : "[Minimap] 1.0 remote player reader unavailable");
                 Log(g_localWaypointLayoutSupported ? "[Minimap] 1.0 local waypoint reader ready; yellow diamond enabled"
                     : "[Minimap] 1.0 local waypoint reader unavailable");
+                if (hotfix && HasVerifiedRelease10DeathLayout())
+                {
+                    g_release10DeathArrayOffset = 0x3E6A78;
+                    g_deathMapHook = InstallEntryHook(0x2FEE40, g_clearMapMarkersExpected,
+                        reinterpret_cast<void*>(&CaptureRelease10DeathsHook), "1.0 death-only snapshot");
+                    g_deathMarkerLayoutSupported = g_deathMapHook != nullptr;
+                }
+                Log(g_deathMarkerLayoutSupported ? "[Minimap] 1.0 death-only reader ready; existing POI bridge unchanged"
+                    : "[Minimap] death-only reader unavailable; other hooks unchanged");
                 g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
                 loadReady_ = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
                 loaded = loadReady_;
                 Log(hotfix ? "[Minimap] client profile=1.0 Steam build 25988036; static validated, gameplay unverified"
                     : "[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
-                Log("[Minimap] 1.0 core preview: pings, world markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
+                Log("[Minimap] 1.0 core preview: pings, world POI markers, clock, weather and live fog unavailable; bundled terrain is pre-1.0");
                 RefreshMinimapConfig(modContext, true);
                 return;
             }
@@ -10014,6 +10105,8 @@ namespace
                 delete g_clearMapMarkersHook;
                 g_clearMapMarkersHook = nullptr;
             }
+            if (g_deathMapHook) { g_deathMapHook->deactivate(); delete g_deathMapHook; g_deathMapHook = nullptr; }
+            g_release10DeathArrayOffset = 0;
             g_worldMapLayoutSupported = false;
             g_deathMarkerLayoutSupported = false;
             if (g_playerUiDataHook != nullptr)
@@ -10145,6 +10238,7 @@ namespace
             const bool cameraOk = ActivateHook(g_playerCameraTransformHook);
             ActivateHook(g_playerUiDataHook);
             ActivateHook(g_clearMapMarkersHook);
+            ActivateHook(g_deathMapHook);
             ActivateHook(g_daytimeUiHook);
             ActivateHook(g_weatherSampleHook);
             ActivateHook(g_fogUpdateHook);
@@ -10166,6 +10260,7 @@ namespace
             oss << "[Minimap] activate internal bridge"
                 << " | camera_hook=" << HookActivationState(g_playerCameraTransformHook)
                 << " | remote_player_hook=" << HookActivationState(g_playerUiDataHook)
+                << " | death_hook=" << HookActivationState(g_deathMapHook)
                 << " | world_map_hook=" << HookActivationState(g_clearMapMarkersHook)
                 << " | world_clock_hook=" << HookActivationState(g_daytimeUiHook)
                 << " | weather_hook=" << HookActivationState(g_weatherSampleHook)
@@ -10196,6 +10291,7 @@ namespace
                 g_daytimeUiHook->deactivate();
             if (g_clearMapMarkersHook != nullptr)
                 g_clearMapMarkersHook->deactivate();
+            if (g_deathMapHook) g_deathMapHook->deactivate();
             if (g_playerUiDataHook != nullptr)
                 g_playerUiDataHook->deactivate();
             {
@@ -10260,7 +10356,7 @@ namespace
 extern "C" __declspec(dllexport) Mod* CreateModInstance()
 {
     InitializeDiagnosticLog();
-    Log("[Minimap] factory version=0.5.12");
+    Log("[Minimap] factory version=0.5.13");
     return new MinimapMod();
 }
 
