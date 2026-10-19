@@ -1,0 +1,47 @@
+{
+  "verification": "independent static PE read; no runtime evidence",
+  "checks": {
+    "init": true,
+    "clear": true,
+    "select": true,
+    "allocate": true,
+    "stride": true,
+    "position": true,
+    "key": true,
+    "entry": true,
+    "clear_map_markers_for_ui": true,
+    "replicate_map_markers_for_ui": true,
+    "iterator_call_target": true
+  },
+  "details": {
+    "init": {
+      "rva": "0x2fee4f",
+      "observed": "e8 0c bd 6b 00"
+    },
+    "clear": {
+      "rva": "0x2fee62",
+      "observed": "48 89 88 80 6a 3e 00"
+    },
+    "select": {
+      "rva": "0x310c69",
+      "observed": "b9 78 6a 3e 00 eb 1d"
+    },
+    "allocate": {
+      "rva": "0x310c8d",
+      "observed": "48 03 4d 90 e8 aa c6 fe ff"
+    },
+    "stride": {
+      "rva": "0x2fd373",
+      "observed": "48 8b 43 08 33 d2 48 8d 0c 80 48 8b 03 48 c1 e1 05 48 03 c1"
+    },
+    "position": {
+      "rva": "0x310e97",
+      "observed": "0f 10 07 0f 11 46 10 f2 0f 10 4f 10 f2 0f 11 4e 20"
+    },
+    "key": {
+      "rva": "0x310fdd",
+      "observed": "89 46 30"
+    }
+  },
+  "pass": true
+}

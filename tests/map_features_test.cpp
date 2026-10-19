@@ -672,6 +672,7 @@ namespace
         g_remotePlayers={{1,Fixed(260),0,Fixed(220),GetTickCount(),0}};
         g_pings={{2,Fixed(220),0,Fixed(220),GetTickCount(),0}};
         g_deathMarkers={{Fixed(220),0,Fixed(260),0x1AD8F96Eu,false}};
+        g_deathMapTick=GetTickCount(); g_deathMapSession=g_worldSessionGeneration.load();
         CapturedWaypoint waypoint{}; waypoint.x=Fixed(260); waypoint.z=Fixed(260);
         std::memset(pixels,0,sizeof(pixels)); clears=0;
         DrawLiveMarkers(renderer,nullptr,{waypoint},240,240,1,0,256,160,100);
@@ -1107,6 +1108,80 @@ int main(int argc, char** argv)
         WorldWeatherSnapshot weather{}; weather.valid=true; weather.kind=1;
         DrawWorldClockPanel(renderer, nullptr, 256, 138 + previewHalf + previewYOffset + CLOCK_FRAME_GAP + CLOCK_PANEL_HALF_HEIGHT, clock,weather);
         WritePreview((std::string(argv[2]) + ".combined.bmp").c_str());
+    }
+    {
+        // Independent 1.0 death snapshot: an A0 stride fixture deliberately
+        // differs from the legacy 80 stride and never refreshes POI state.
+        constexpr std::size_t deathOffset = 0x3E6A78;
+        std::vector<std::uint8_t> nativeState(deathOffset + 16);
+        std::array<std::uint8_t, 0xA0 * 3> nativeDeaths{};
+        const auto entry = [&](std::size_t index, int x, int z) {
+            Put(nativeDeaths.data(), index * 0xA0 + 0x10, Fixed(x));
+            Put(nativeDeaths.data(), index * 0xA0 + 0x18, Fixed(200));
+            Put(nativeDeaths.data(), index * 0xA0 + 0x20, Fixed(z));
+            Put(nativeDeaths.data(), index * 0xA0 + 0x30, std::uint32_t(0x1AD8F96E));
+        };
+        entry(0, 1020, 1000); entry(1, 1000, 1040); entry(2, -10000, 1000);
+        Put(nativeState.data(), deathOffset, reinterpret_cast<uintptr_t>(nativeDeaths.data()));
+        Put(nativeState.data(), deathOffset + 8, std::uint64_t(3));
+        g_release10DeathArrayOffset = deathOffset;
+        g_deathMarkerLayoutSupported = true;
+        g_showDeathMarkers = true;
+        g_worldMapLayoutSupported = false;
+        g_showWorldMarkers = false;
+        g_worldMapValid = true;
+        g_worldMapTick = 500;
+        g_worldMapMarkers = { { Fixed(1100), Fixed(200), Fixed(1100), WORLD_MAP_FLAME_ALTAR, false } };
+        g_remotePlayers = { { 3, Fixed(1200), Fixed(200), Fixed(1200), 777 } };
+        CapturedWaypoint selected{};
+        selected.id = 9; selected.x = Fixed(1300); selected.z = Fixed(1300);
+        g_waypoints = { selected };
+        g_lastWaypointTick = 777;
+        g_lastRemoteCaptureTick = 888;
+        const auto session = g_worldSessionGeneration.load();
+        const auto capture = [&](DWORD tick) {
+            return CaptureRelease10Deaths(reinterpret_cast<uintptr_t>(nativeState.data()), tick, session);
+        };
+        Check(capture(1000) && CopyDeathMarkers(1000).size() == 2 &&
+            CopyDeathMarkers(1000)[1].z == Fixed(1040),
+            "1.0 death-only A0 stride captures multiple tombstones and rejects off-world coordinates");
+        Check(!g_worldMapLayoutSupported && !g_showWorldMarkers && g_worldMapValid &&
+            g_worldMapTick == 500 && g_worldMapMarkers.size() == 1 &&
+            g_worldMapMarkers[0].key == WORLD_MAP_FLAME_ALTAR && g_worldMapMarkers[0].x == Fixed(1100),
+            "death-only capture preserves POI capability visibility validity snapshot and freshness");
+        Check(g_remotePlayers.size() == 1 && g_remotePlayers[0].id == 3 &&
+            g_waypoints.size() == 1 && g_waypoints[0].x == Fixed(1300) &&
+            g_lastWaypointTick == 777 && g_lastRemoteCaptureTick == 888,
+            "death-only reader leaves friend and waypoint feeds and freshness unchanged");
+        Check(CopyDeathMarkers(3001).empty() && CopyWorldMapMarkers(2501).empty(),
+            "death TTL expires independently and never refreshes stale POIs");
+        Check(capture(0xFFFFFFF0u) && CopyDeathMarkers(0x10).size() == 2,
+            "1.0 death-only freshness survives unsigned timer wrap");
+        Put(nativeState.data(), deathOffset + 8, std::uint64_t(0));
+        Check(capture(1000) && CopyDeathMarkers(1000).empty(),
+            "1.0 empty completed death snapshot removes recovered tombstones");
+        Put(nativeState.data(), deathOffset + 8, std::uint64_t(1));
+        Check(capture(1000) && CopyDeathMarkers(1000).size() == 1,
+            "1.0 later death appears after an empty snapshot");
+        Put(nativeState.data(), deathOffset + 8, std::uint64_t(DEATH_MAP_MAX_ENTRIES + 1));
+        Check(!capture(1001) && CopyDeathMarkers(1001).empty() && g_worldMapTick == 500 &&
+            g_worldMapMarkers.size() == 1, "1.0 oversized death count clears deaths without altering POIs");
+        Put(nativeState.data(), deathOffset + 8, std::uint64_t(1));
+        Put(nativeState.data(), deathOffset, uintptr_t(1));
+        Check(!capture(1002) && CopyDeathMarkers(1002).empty(),
+            "1.0 unreadable death array clears the prior snapshot safely");
+        Put(nativeState.data(), deathOffset, reinterpret_cast<uintptr_t>(nativeDeaths.data()));
+        Check(capture(1100), "1.0 valid death feed resumes after unreadable snapshot");
+        const DWORD savedDeathTick = g_deathMapTick;
+        Check(!CaptureRelease10Deaths(reinterpret_cast<uintptr_t>(nativeState.data()), 1200, session + 1) &&
+            g_deathMapTick == savedDeathTick && CopyDeathMarkers(1100).size() == 1,
+            "late death snapshot from another session cannot overwrite current death state");
+        g_worldSessionGeneration = session + 1;
+        Check(CopyDeathMarkers(1100).empty(), "session generation change hides old-world tombstones");
+        g_worldSessionGeneration = session;
+        ClearLiveMarkers();
+        Check(CopyDeathMarkers(1100).empty(), "leaving the world clears independent death snapshot");
+        g_release10DeathArrayOffset = 0;
     }
     return 0;
 }
