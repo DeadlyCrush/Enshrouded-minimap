@@ -99,6 +99,18 @@ int main()
     Check(g_playerPosition.valid, "capture through camera hook");
     Check(context[1] == 0, "leave game iterator cursor untouched");
     Check(nextCalls == 2, "advance despite init placeholders and skip remote entity");
+    {
+        // Populate only the new descriptor member. The adjacent old offset is
+        // intentionally zero so reusing 0x828 cannot accidentally pass.
+        std::memcpy(testDescriptor.data() + 0x830, &ids, sizeof(ids));
+        uintptr_t record[10]{};
+        g_cameraEntityArrayOffset = 0x828;
+        Check(!TryReadLocalCameraRecord(context, record), "old 828 camera layout rejects new-only descriptor fixture");
+        g_cameraEntityArrayOffset = 0x830;
+        Check(TryReadLocalCameraRecord(context, record) && record[2] == reinterpret_cast<uintptr_t>(&playerTransform) &&
+            context[1] == 0, "new 830 camera layout selects local entity without moving game cursor");
+        g_cameraEntityArrayOffset = 0x7E0;
+    }
     Check(g_playerPosition.channel == 30 && g_playerPosition.x == playerTransform.position[0] &&
         g_playerPosition.hasHeading && std::abs(g_playerPosition.headingRadians) < 0.0001f,
         "publish local transform and heading");

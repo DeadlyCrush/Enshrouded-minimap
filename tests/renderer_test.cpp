@@ -246,6 +246,54 @@ int main()
         g_lastVulkanDevice = 0;
     }
     {
+        std::array<unsigned char,0x348> frame{};
+        std::array<unsigned char,0x1B8> object{};
+        uintptr_t objects[1]={reinterpret_cast<uintptr_t>(object.data())};
+        uintptr_t images[2]={0xABC100,0xABC200};
+        const auto put=[](unsigned char* data,std::size_t offset,const auto& value) {
+            std::memcpy(data+offset,&value,sizeof(value));
+        };
+        const uintptr_t handle=0xABC000;
+        put(frame.data(),0x338,reinterpret_cast<uintptr_t>(objects));
+        put(frame.data(),0x340,std::uint64_t(1));
+        put(object.data(),0x48,handle);
+        put(object.data(),0x10,std::uint8_t(44));
+        put(object.data(),0x1B0,std::uint32_t(2560));
+        put(object.data(),0x1B4,std::uint32_t(1440));
+        put(object.data(),0x58,reinterpret_cast<uintptr_t>(images));
+        put(object.data(),0x60,std::uint64_t(2));
+        SwapchainRuntimeInfo snapshot{};
+        const char* reason=nullptr;
+        const auto read=[&]() { return ReadRelease10SwapchainMetadata(
+            reinterpret_cast<uintptr_t>(frame.data()),handle,0xDEF000,snapshot,reason); };
+        g_nativeSwapchainLayout={};
+        Check(!read(),"old native layout rejects new-only swapchain metadata");
+        g_nativeSwapchainLayout={0x48,0x10,0x1B0,0x1B4,0x58,0x60};
+        Check(read() && snapshot.width==2560 && snapshot.height==1440 && snapshot.format==44 &&
+            snapshot.images.size()==2,"new native layout reads independently shifted handle format extent and images");
+        put(object.data(),0x10,std::uint8_t(0));
+        Check(!read(),"new native layout rejects missing format");
+        put(object.data(),0x10,std::uint8_t(147));
+        Check(!read(),"new native layout rejects unsupported format bounds");
+        put(object.data(),0x10,std::uint8_t(44));
+        put(object.data(),0x1B0,std::uint32_t(0));
+        Check(!read(),"new native layout refuses zero extent instead of guessing screen size");
+        put(object.data(),0x1B0,std::uint32_t(16385));
+        Check(!read(),"new native layout rejects oversized extent");
+        put(object.data(),0x1B0,std::uint32_t(2560));
+        put(object.data(),0x60,std::uint64_t(17));
+        Check(!read(),"new native layout rejects excessive image count");
+        put(object.data(),0x60,std::uint64_t(2));
+        images[1]=images[0];
+        Check(!read(),"new native layout rejects duplicate images");
+        images[1]=0xABC200;
+        put(object.data(),0x58,uintptr_t(1));
+        Check(!read(),"new native layout safely refuses unreadable images");
+        g_nativeSwapchainLayout={};
+        Check(g_nativeSwapchainLayout.handle==0x38 && g_nativeSwapchainLayout.width==0x1A8 &&
+            g_nativeSwapchainLayout.imageCount==0x50,"new native profile does not change the legacy layout defaults");
+    }
+    {
         wchar_t directory[MAX_PATH]{}, path[MAX_PATH]{};
         Check(GetTempPathW(MAX_PATH, directory) != 0 && GetTempFileNameW(directory, L"mmd", 0, path) != 0,
             "create isolated diagnostic log fixture");
