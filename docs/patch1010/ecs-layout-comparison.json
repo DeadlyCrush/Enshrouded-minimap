@@ -1,0 +1,512 @@
+{
+  "verification": "static only; direct call/branch targets and RIP displacement excluded from instruction comparison",
+  "sha256": "0403981fd2e8ad18bd8c5698dff03c8d505b5a46677832c496db9c645513f2a6",
+  "comparisons": [
+    {
+      "old": "player_camera_transform.txt",
+      "new": "player_camera_transform.txt",
+      "instructions": 430,
+      "differences": [
+        {
+          "instruction": 57,
+          "old": [
+            "movss",
+            "xmm6, dword ptr [rcx + 0x1c4]"
+          ],
+          "new": [
+            "movss",
+            "xmm6, dword ptr [rcx + 0x1cc]"
+          ]
+        }
+      ]
+    },
+    {
+      "old": "player_waypoints_ui.txt",
+      "new": "player_waypoints_ui.txt",
+      "instructions": 212,
+      "differences": [
+        {
+          "instruction": 204,
+          "old": [
+            "call",
+            "TARGET"
+          ],
+          "new": [
+            "mov",
+            "rax, qword ptr [rip TARGET]"
+          ]
+        },
+        {
+          "instruction": 205,
+          "old": [
+            "int3",
+            ""
+          ],
+          "new": [
+            "mov",
+            "dword ptr [rax], 0x2a"
+          ]
+        },
+        {
+          "instruction": 206,
+          "old": [
+            "lea",
+            "r8, [r14 + 0x10]"
+          ],
+          "new": [
+            "call",
+            "TARGET"
+          ]
+        },
+        {
+          "instruction": 207,
+          "old": [
+            "xor",
+            "ecx, ecx"
+          ],
+          "new": [
+            "int3",
+            ""
+          ]
+        },
+        {
+          "instruction": 208,
+          "old": [
+            "lea",
+            "r9, [rsp + 0x98]"
+          ],
+          "new": [
+            "lea",
+            "r8, [r14 + 0x10]"
+          ]
+        },
+        {
+          "instruction": 209,
+          "old": [
+            "lea",
+            "rdx, [rip TARGET]"
+          ],
+          "new": [
+            "xor",
+            "ecx, ecx"
+          ]
+        },
+        {
+          "instruction": 210,
+          "old": [
+            "call",
+            "TARGET"
+          ],
+          "new": [
+            "lea",
+            "r9, [rsp + 0x98]"
+          ]
+        },
+        {
+          "instruction": 211,
+          "old": [
+            "call",
+            "TARGET"
+          ],
+          "new": [
+            "lea",
+            "rdx, [rip TARGET]"
+          ]
+        }
+      ]
+    },
+    {
+      "old": "update_ui_data.txt",
+      "new": "update_ui_data.txt",
+      "instructions": 954,
+      "differences": []
+    },
+    {
+      "old": "helper-9b6e60.txt",
+      "new": "helper-9c26c0.txt",
+      "instructions": 560,
+      "differences": [
+        {
+          "instruction": 6,
+          "old": [
+            "cmp",
+            "rax, qword ptr [r8 + 0x830]"
+          ],
+          "new": [
+            "cmp",
+            "rax, qword ptr [r8 + 0x838]"
+          ]
+        },
+        {
+          "instruction": 99,
+          "old": [
+            "mov",
+            "r10, qword ptr [rcx + 0x808]"
+          ],
+          "new": [
+            "mov",
+            "r10, qword ptr [rcx + 0x810]"
+          ]
+        },
+        {
+          "instruction": 107,
+          "old": [
+            "mov",
+            "r11, qword ptr [rcx + 0x7f8]"
+          ],
+          "new": [
+            "mov",
+            "r11, qword ptr [rcx + 0x800]"
+          ]
+        },
+        {
+          "instruction": 114,
+          "old": [
+            "mov",
+            "rdx, qword ptr [rcx + 0x828]"
+          ],
+          "new": [
+            "mov",
+            "rdx, qword ptr [rcx + 0x830]"
+          ]
+        },
+        {
+          "instruction": 121,
+          "old": [
+            "add",
+            "rdx, 0xebc030"
+          ],
+          "new": [
+            "add",
+            "rdx, 0x7bc030"
+          ]
+        },
+        {
+          "instruction": 215,
+          "old": [
+            "mov",
+            "rdx, qword ptr [rcx + 0x1cf3ac0]"
+          ],
+          "new": [
+            "mov",
+            "rdx, qword ptr [rcx + 0x15f56c0]"
+          ]
+        },
+        {
+          "instruction": 216,
+          "old": [
+            "mov",
+            "eax, dword ptr [rdx + 0xec44b0]"
+          ],
+          "new": [
+            "mov",
+            "eax, dword ptr [rdx + 0x7c44b0]"
+          ]
+        },
+        {
+          "instruction": 217,
+          "old": [
+            "lea",
+            "r8, [rdx + 0xedc4c8]"
+          ],
+          "new": [
+            "lea",
+            "r8, [rdx + 0x7dc4c8]"
+          ]
+        },
+        {
+          "instruction": 218,
+          "old": [
+            "sub",
+            "eax, dword ptr [rdx + 0xec44b8]"
+          ],
+          "new": [
+            "sub",
+            "eax, dword ptr [rdx + 0x7c44b8]"
+          ]
+        },
+        {
+          "instruction": 219,
+          "old": [
+            "lea",
+            "rcx, [rdx + 0xedc4c0]"
+          ],
+          "new": [
+            "lea",
+            "rcx, [rdx + 0x7dc4c0]"
+          ]
+        },
+        {
+          "instruction": 223,
+          "old": [
+            "mov",
+            "eax, dword ptr [rcx + 0x1cda130]"
+          ],
+          "new": [
+            "mov",
+            "eax, dword ptr [rcx + 0x15dbd30]"
+          ]
+        },
+        {
+          "instruction": 224,
+          "old": [
+            "lea",
+            "r8, [rcx + 0x1cf2148]"
+          ],
+          "new": [
+            "lea",
+            "r8, [rcx + 0x15f3d48]"
+          ]
+        },
+        {
+          "instruction": 225,
+          "old": [
+            "sub",
+            "eax, dword ptr [rcx + 0x1cda138]"
+          ],
+          "new": [
+            "sub",
+            "eax, dword ptr [rcx + 0x15dbd38]"
+          ]
+        },
+        {
+          "instruction": 226,
+          "old": [
+            "add",
+            "rcx, 0x1cf2140"
+          ],
+          "new": [
+            "add",
+            "rcx, 0x15f3d40"
+          ]
+        },
+        {
+          "instruction": 535,
+          "old": [
+            "lea",
+            "r8, [r8 + 0x1d73e8]"
+          ],
+          "new": [
+            "lea",
+            "r8, [r8 + 0xf73e8]"
+          ]
+        },
+        {
+          "instruction": 544,
+          "old": [
+            "lock",
+            "inc  dword ptr [r9 + 0xebbfc0]"
+          ],
+          "new": [
+            "lock",
+            "inc  dword ptr [r9 + 0x7bbfc0]"
+          ]
+        },
+        {
+          "instruction": 550,
+          "old": [
+            "lock",
+            "cmpxchg dword ptr [rdx + r9 + 0xebbd40], r10d"
+          ],
+          "new": [
+            "lock",
+            "cmpxchg dword ptr [rdx + r9 + 0x7bbd40], r10d"
+          ]
+        }
+      ]
+    },
+    {
+      "old": "helper-9bc1a0.txt",
+      "new": "helper-9c7ac0.txt",
+      "instructions": 414,
+      "differences": [
+        {
+          "instruction": 23,
+          "old": [
+            "movzx",
+            "eax, byte ptr [r9 + 0x7f0]"
+          ],
+          "new": [
+            "movzx",
+            "eax, byte ptr [r9 + 0x7f8]"
+          ]
+        },
+        {
+          "instruction": 27,
+          "old": [
+            "movzx",
+            "eax, byte ptr [r9 + 0x7a0]"
+          ],
+          "new": [
+            "movzx",
+            "eax, byte ptr [r9 + 0x7a8]"
+          ]
+        },
+        {
+          "instruction": 82,
+          "old": [
+            "add",
+            "rdx, 0x7a8"
+          ],
+          "new": [
+            "add",
+            "rdx, 0x7b0"
+          ]
+        },
+        {
+          "instruction": 328,
+          "old": [
+            "mov",
+            "rax, qword ptr [r8 + 0x828]"
+          ],
+          "new": [
+            "mov",
+            "rax, qword ptr [r8 + 0x830]"
+          ]
+        },
+        {
+          "instruction": 396,
+          "old": [
+            "mov",
+            "rax, qword ptr [r8 + 0x828]"
+          ],
+          "new": [
+            "mov",
+            "rax, qword ptr [r8 + 0x830]"
+          ]
+        }
+      ]
+    },
+    {
+      "old": "helper-9b4230.txt",
+      "new": "helper-9bf920.txt",
+      "instructions": 21,
+      "differences": [
+        {
+          "instruction": 10,
+          "old": [
+            "mov",
+            "rcx, qword ptr [rax + 0x828]"
+          ],
+          "new": [
+            "mov",
+            "rcx, qword ptr [rax + 0x830]"
+          ]
+        }
+      ]
+    },
+    {
+      "old": "helper-3b1cc0.txt",
+      "new": "helper-3b8330.txt",
+      "instructions": 14,
+      "differences": []
+    },
+    {
+      "old": "helper-9a72a0.txt",
+      "new": "helper-9b2b30.txt",
+      "instructions": 58,
+      "differences": []
+    }
+  ],
+  "metadata": {
+    "0x1e35780": {
+      "0x38": [],
+      "0x98": [
+        "BasicPlayerInfos",
+        "LocalPlayerData",
+        "g38_items::ItemRegistry"
+      ],
+      "0xb0": [
+        "G38UiPlayData",
+        "g38_items::ItemOrders"
+      ],
+      "0xe0": [
+        "RenderTransform"
+      ]
+    },
+    "0x1e25e00": {
+      "0x38": [
+        "DynamicNetworkLocomotion",
+        "RenderTransform"
+      ],
+      "0x98": [
+        "LocalPlayerData",
+        "g38_items::ItemRegistry"
+      ],
+      "0xb0": [
+        "LocalPlayerCamera",
+        "LocalPlayerCameraTransform"
+      ],
+      "0xe0": []
+    },
+    "0x1e2fd80": {
+      "0x38": [],
+      "0x98": [
+        "LocalPlayerData"
+      ],
+      "0xb0": [
+        "G38UiPlayData"
+      ],
+      "0xe0": [
+        "PlayerWaypoint"
+      ]
+    }
+  },
+  "windows": {
+    "0x2b7820": "40 55 57 48 8D AC 24 B8 FE FF FF 48 81 EC 48 02 00 00",
+    "0x313f20": "48 89 5C 24 18 48 89 6C 24 20 56 57 41 55 41 56 41 57",
+    "0x31d2b0": "48 89 4C 24 08 55 53 57 41 54 41 55 41 57 48 8D AC 24 A8 FE FF FF",
+    "0x31d2cd": "41 B8 98 00 00 00 48 8D 54 24 20 E8 E3 A7 6A 00",
+    "0x313f85": "E8 06 EB 69 00",
+    "0x31d8ff": "48 8B 85 90 01 00 00 48 8B 7C 24 50 48 8B 08 E8 AD 21 6A 00 48 8B D0 48 8D 4D F0 45 8B CE 4C 8B C7 E8 6B 51 69 00",
+    "0x3b8330": "8D 42 FF 3D FE 03 00 00 77 1D 4C 8D 0C 80 49 C1 E1 05 43 39 14 01 75 0F",
+    "0x9bfac0": "48 8B 41 30 C3",
+    "0x9bf939": "48 8B 88 30 08 00 00"
+  },
+  "required_layout_change": {
+    "camera_entity_array_offset": {
+      "old": "0x828",
+      "new": "0x830",
+      "proof_rva": "0x9BF939"
+    }
+  },
+  "unchanged_reader_fields": {
+    "camera_record_bytes": "0x50",
+    "player_transform": "record[2]",
+    "local_player_data": "record[3]+4",
+    "camera_transform": "record[6]",
+    "transform_fixed_xyz": [
+      "0",
+      "8",
+      "10"
+    ],
+    "transform_quaternion": [
+      "18",
+      "1c",
+      "20",
+      "24"
+    ],
+    "waypoint_record_bytes": "0x30",
+    "waypoint_local_data": "record[1]+4",
+    "waypoint_lookup": "record[3]",
+    "waypoint_component_enabled": "0",
+    "waypoint_component_xyz": [
+      "8",
+      "10",
+      "18"
+    ],
+    "remote_record_bytes": "0x98",
+    "remote_basic_player_infos": "record[1]",
+    "remote_local_data": "record[2]+4",
+    "remote_render_transform_lookup": "record[6]",
+    "remote_basic_stride": "0xA0",
+    "remote_id_range": "1..1023"
+  },
+  "interpretation": [
+    "camera reader must use entity offset 0x830 for this exact hash",
+    "camera system internal field 0x1c4 changed to0x1cc; minimap does not read that field",
+    "waypoint ordinary path first 198 instructions unchanged; exception tail changed",
+    "iterator internal descriptor offsets changed; call updated native functions, do not copy old internals",
+    "runtime capture/rendering remains unverified"
+  ]
+}
