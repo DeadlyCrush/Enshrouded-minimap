@@ -1,0 +1,451 @@
+{
+  "binarySha256": "ce6fdba63e27744943b695921383a29133285d359e07671f6ca33a47e2147618",
+  "textSha256": "1930c4076a37413d563883888f95b52701190c5693059f25caa035d34ad870bc",
+  "verification": "Static executable only; no runtime validation",
+  "newRvas": {
+    "present": "0xFEDA50",
+    "init": "0xFFA1F0",
+    "initEnd": "0xFFD89F",
+    "initCall": [
+      {
+        "rva": "0xfd8643",
+        "bytes": "e8 a8 1b 02 00"
+      }
+    ],
+    "formatConverter": "0xFF7D70",
+    "formatTable": "0xff8370",
+    "deathClear": "0x304390",
+    "deathClearRegistry": "0x1E26D90",
+    "deathReplicate": "0x3160D0",
+    "deathReplicateRegistry": "0x1E30330",
+    "deathAllocator": "0x302890",
+    "iterInit": "0x9C7AA0"
+  },
+  "nativeSwapchainLayoutUnchanged": {
+    "handle": "0x48 (previous0x38)",
+    "format": "0x10 uint8 (previous0x0C)",
+    "nativeWidth": "0x1B0 uint32 (previous0x1A8)",
+    "nativeHeight": "0x1B4 uint32 (previous0x1AC)",
+    "images": "0x58 pointer (previous0x48)",
+    "imageCount": "0x60 uint64 (previous0x50)",
+    "renderWidth": "0x08 uint32, not native extent",
+    "renderHeight": "0x0C uint32, not native extent"
+  },
+  "vulkanSlotsUnchanged": {
+    "module": "0x10",
+    "getInstanceProcAddr": "0x18",
+    "createInstance": "0x20",
+    "getDeviceProcAddr": "0x78",
+    "queueSubmit": "0xB8",
+    "create": "0x580",
+    "images": "0x590",
+    "acquire": "0x598",
+    "present": "0x5A0"
+  },
+  "frameLayoutUnchanged": {
+    "arg": "original R8 retained R13",
+    "array": "0x338",
+    "count": "0x340 uint64",
+    "stride": 8
+  },
+  "graphicsLayoutUnchanged": "renderContext+8 table,+28 graphics; graphics+DD0 queueState,+E34 queueIndex; device=table+8",
+  "deathLayoutUnchanged": "array3E6A78/count3E6A80/strideA0/xyz10,18,20/key30,clearrecord10,state[1],iter9C7AA0",
+  "format147CasesIdentity": true,
+  "comparisons": {
+    "renderPrologue": {
+      "count": 15,
+      "nonRelocationChanges": []
+    },
+    "frameRoots": {
+      "count": 11,
+      "nonRelocationChanges": []
+    },
+    "frameArrayAndHandle": {
+      "count": 18,
+      "nonRelocationChanges": []
+    },
+    "queuePresent": {
+      "count": 30,
+      "nonRelocationChanges": []
+    },
+    "initPrologue": {
+      "count": 14,
+      "nonRelocationChanges": []
+    },
+    "initCall": {
+      "count": 10,
+      "nonRelocationChanges": []
+    },
+    "namedVulkanSlots": {
+      "count": 32,
+      "nonRelocationChanges": []
+    },
+    "formatInput": {
+      "count": 10,
+      "nonRelocationChanges": []
+    },
+    "formatConverter": {
+      "count": 11,
+      "nonRelocationChanges": []
+    },
+    "createResult": {
+      "count": 10,
+      "nonRelocationChanges": []
+    },
+    "imageHandles": {
+      "count": 31,
+      "nonRelocationChanges": []
+    },
+    "extentSource": {
+      "count": 18,
+      "nonRelocationChanges": []
+    },
+    "extentCreateInfo": {
+      "count": 12,
+      "nonRelocationChanges": []
+    },
+    "deathClear": {
+      "count": 13,
+      "nonRelocationChanges": []
+    },
+    "deathSelect": {
+      "count": 12,
+      "nonRelocationChanges": []
+    },
+    "deathStride": {
+      "count": 12,
+      "nonRelocationChanges": []
+    }
+  },
+  "disassembly": {
+    "renderPrologue": [
+      "0xfeda50: mov qword ptr [rsp + 0x18], r8",
+      "0xfeda55: mov qword ptr [rsp + 0x10], rdx",
+      "0xfeda5a: mov qword ptr [rsp + 8], rcx",
+      "0xfeda5f: push rbp",
+      "0xfeda60: push rbx",
+      "0xfeda61: push rsi",
+      "0xfeda62: push rdi",
+      "0xfeda63: push r12",
+      "0xfeda65: push r13",
+      "0xfeda67: push r14",
+      "0xfeda69: push r15",
+      "0xfeda6b: lea rbp, [rsp - 0x1748]",
+      "0xfeda73: mov eax, 0x1848",
+      "0xfeda78: call 0x134a570",
+      "0xfeda7d: sub rsp, rax"
+    ],
+    "frameRoots": [
+      "0xfee400: lea r12, [r13 + 0x338]",
+      "0xfee407: je 0xfee427",
+      "0xfee409: mov rdx, r12",
+      "0xfee40c: lea rcx, [rbp + 0x17a8]",
+      "0xfee413: call 0x1025e80",
+      "0xfee418: mov rax, qword ptr [rbp + 0x17a8]",
+      "0xfee41f: test al, al",
+      "0xfee421: jne 0xfee981",
+      "0xfee427: lea r15, [r13 + 0x340]",
+      "0xfee42e: cmp qword ptr [r15], rdi",
+      "0xfee431: je 0xfee8c1"
+    ],
+    "frameArrayAndHandle": [
+      "0xfee531: mov rax, qword ptr [r12]",
+      "0xfee535: lea rdx, [rdi + 1]",
+      "0xfee539: mov qword ptr [rbp + 0x17a8], rdx",
+      "0xfee540: mov rbx, qword ptr [rax + r14*8]",
+      "0xfee544: cmp rdx, rcx",
+      "0xfee547: jbe 0xfee56d",
+      "0xfee549: test r9, r9",
+      "0xfee54c: je 0xfeeabc",
+      "0xfee552: neg rdx",
+      "0xfee555: lea rcx, [rbp + 0x700]",
+      "0xfee55c: xor r8d, r8d",
+      "0xfee55f: call r9",
+      "0xfee562: mov rdi, qword ptr [rbp + 0x708]",
+      "0xfee569: test al, al",
+      "0xfee56b: je 0xfee58d",
+      "0xfee56d: mov rcx, qword ptr [rbx + 0x48]",
+      "0xfee571: mov rax, qword ptr [rbp + 0x700]",
+      "0xfee578: mov qword ptr [rax + rdi*8], rcx"
+    ],
+    "queuePresent": [
+      "0xfee642: mov rsi, qword ptr [rbp + 0x1790]",
+      "0xfee649: mov qword ptr [rbp - 0x68], rax",
+      "0xfee64d: mov dword ptr [rbp - 0x70], 0x3b9acde9",
+      "0xfee654: mov dword ptr [rsp + 0x50], 0x3ba21919",
+      "0xfee65c: mov rax, qword ptr [rsi + 0x28]",
+      "0xfee660: mov ecx, dword ptr [rax + 0xe34]",
+      "0xfee666: mov rbx, qword ptr [rax + 0xdd0]",
+      "0xfee66d: shl rcx, 4",
+      "0xfee671: add rbx, 8",
+      "0xfee675: add rbx, rcx",
+      "0xfee678: mov rcx, rbx",
+      "0xfee67b: call 0x8b89f0",
+      "0xfee680: test al, al",
+      "0xfee682: jne 0xfee6a3",
+      "0xfee684: call 0x8bb270",
+      "0xfee689: mov rcx, rbx",
+      "0xfee68c: call 0x8b89f0",
+      "0xfee691: test al, al",
+      "0xfee693: je 0xfee684",
+      "0xfee695: lea r15, [r14 + 0x16e0]",
+      "0xfee69c: lea r13, [r14 + 0x16d8]",
+      "0xfee6a3: mov rax, qword ptr [rsi + 0x28]",
+      "0xfee6a7: lea rdx, [rbp - 0x70]",
+      "0xfee6ab: mov edi, dword ptr [rax + 0xe34]",
+      "0xfee6b1: mov rcx, qword ptr [rax + 0xdd0]",
+      "0xfee6b8: add rdi, rdi",
+      "0xfee6bb: mov rax, qword ptr [rsi + 8]",
+      "0xfee6bf: mov rcx, qword ptr [rcx + rdi*8]",
+      "0xfee6c3: mov rax, qword ptr [rax + 0x5a0]",
+      "0xfee6ca: call rax"
+    ],
+    "initPrologue": [
+      "0xffa1f0: push rbp",
+      "0xffa1f2: push rbx",
+      "0xffa1f3: push rsi",
+      "0xffa1f4: push rdi",
+      "0xffa1f5: push r12",
+      "0xffa1f7: push r13",
+      "0xffa1f9: push r14",
+      "0xffa1fb: push r15",
+      "0xffa1fd: mov rbp, rsp",
+      "0xffa200: sub rsp, 0x58",
+      "0xffa204: mov rax, qword ptr [rcx + 0x78]",
+      "0xffa208: lea rbx, [rip + 0xdc52c1]",
+      "0xffa20f: mov qword ptr [rcx], rdx",
+      "0xffa212: mov rdi, rcx"
+    ],
+    "initCall": [
+      "0xfd861b: movzx eax, byte ptr [rbx + 0x200]",
+      "0xfd8622: lea r9, [rbp + 0x10]",
+      "0xfd8626: mov r8, qword ptr [rdi + 0x788]",
+      "0xfd862d: mov rdx, qword ptr [rdi + 0x780]",
+      "0xfd8634: mov rcx, qword ptr [rdi + 0x770]",
+      "0xfd863b: mov qword ptr [rbp + 0x18], rax",
+      "0xfd863f: mov qword ptr [rbp + 0x10], rbx",
+      "0xfd8643: call 0xffa1f0",
+      "0xfd8648: test al, al",
+      "0xfd864a: je 0xfd86c2"
+    ],
+    "namedVulkanSlots": [
+      "0xffd203: lea r9, [rip + 0xdc2ee6]",
+      "0xffd20a: mov byte ptr [rdi + 0x578], 1",
+      "0xffd211: mov r8, r14",
+      "0xffd214: lea rcx, [rbp + 0x50]",
+      "0xffd218: mov rdx, rdi",
+      "0xffd21b: call 0xff7cd0",
+      "0xffd220: lea r9, [rip + 0xdc2ee1]",
+      "0xffd227: mov qword ptr [rdi + 0x580], rax",
+      "0xffd22e: mov r8, r14",
+      "0xffd231: lea rcx, [rbp + 0x50]",
+      "0xffd235: mov rdx, rdi",
+      "0xffd238: call 0xff7cd0",
+      "0xffd23d: lea r9, [rip + 0xdc2edc]",
+      "0xffd244: mov qword ptr [rdi + 0x588], rax",
+      "0xffd24b: mov r8, r14",
+      "0xffd24e: lea rcx, [rbp + 0x50]",
+      "0xffd252: mov rdx, rdi",
+      "0xffd255: call 0xff7cd0",
+      "0xffd25a: lea r9, [rip + 0xdc2ed7]",
+      "0xffd261: mov qword ptr [rdi + 0x590], rax",
+      "0xffd268: mov r8, r14",
+      "0xffd26b: lea rcx, [rbp + 0x50]",
+      "0xffd26f: mov rdx, rdi",
+      "0xffd272: call 0xff7cd0",
+      "0xffd277: lea r9, [rip + 0xdc2ed2]",
+      "0xffd27e: mov qword ptr [rdi + 0x598], rax",
+      "0xffd285: mov r8, r14",
+      "0xffd288: lea rcx, [rbp + 0x50]",
+      "0xffd28c: mov rdx, rdi",
+      "0xffd28f: call 0xff7cd0",
+      "0xffd294: mov qword ptr [rdi + 0x5a0], rax",
+      "0xffd29b: jmp 0xffcdc7"
+    ],
+    "formatInput": [
+      "0xfe0997: lea r13, [rdi + 0x10]",
+      "0xfe099b: movzx ecx, byte ptr [r13]",
+      "0xfe09a0: lea r12, [rdi + 8]",
+      "0xfe09a4: mov dword ptr [rsp + 0x78], edx",
+      "0xfe09a8: mov qword ptr [rsp + 0x7c], rbx",
+      "0xfe09ad: cmp byte ptr [rax + 0x18], 3",
+      "0xfe09b1: sete byte ptr [rbp - 0x7c]",
+      "0xfe09b5: call 0xff7d70",
+      "0xfe09ba: movzx ecx, byte ptr [rdi + 0x11]",
+      "0xfe09be: xor r14d, r14d"
+    ],
+    "formatConverter": [
+      "0xff7d70: sub rsp, 0x28",
+      "0xff7d74: cmp cl, 0x92",
+      "0xff7d77: ja 0xff834e",
+      "0xff7d7d: lea rdx, [rip - 0xff7d84]",
+      "0xff7d84: movzx eax, cl",
+      "0xff7d87: mov eax, dword ptr [rdx + rax*4 + 0xff8370]",
+      "0xff7d8e: add rax, rdx",
+      "0xff7d91: jmp rax",
+      "0xff7d93: xor eax, eax",
+      "0xff7d95: add rsp, 0x28",
+      "0xff7d99: ret "
+    ],
+    "createResult": [
+      "0xfe0caa: lea rbx, [rip + 0x1ec4f]",
+      "0xfe0cb1: mov rax, qword ptr [rbp - 0x20]",
+      "0xfe0cb5: xor cl, cl",
+      "0xfe0cb7: mov qword ptr [rdi + 0x48], rax",
+      "0xfe0cbb: mov rax, qword ptr [rbp + 0x94]",
+      "0xfe0cc2: mov qword ptr [r12], rax",
+      "0xfe0cc6: movzx eax, byte ptr [rbp + 0x9d]",
+      "0xfe0ccd: mov byte ptr [rdi + 0xe1], al",
+      "0xfe0cd3: mov rax, qword ptr [rbp + 0x8c]",
+      "0xfe0cda: mov qword ptr [rdi + 0x1b0], rax"
+    ],
+    "imageHandles": [
+      "0xfe0ee6: mov rdx, qword ptr [rdi + 0x58]",
+      "0xfe0eea: mov r12d, dword ptr [rsp + 0x30]",
+      "0xfe0eef: mov rbx, qword ptr [r15]",
+      "0xfe0ef2: test rdx, rdx",
+      "0xfe0ef5: je 0xfe0f00",
+      "0xfe0ef7: mov rcx, qword ptr [rdi + 0x50]",
+      "0xfe0efb: call 0x89c520",
+      "0xfe0f00: mov qword ptr [rdi + 0x58], r14",
+      "0xfe0f04: mov qword ptr [rdi + 0x60], r14",
+      "0xfe0f08: mov qword ptr [rdi + 0x50], rbx",
+      "0xfe0f0c: test r12, r12",
+      "0xfe0f0f: je 0xfe0f43",
+      "0xfe0f11: test rbx, rbx",
+      "0xfe0f14: je 0xfe0f89",
+      "0xfe0f16: lea rdx, [r12*8]",
+      "0xfe0f1e: mov byte ptr [rsp + 0x20], r14b",
+      "0xfe0f23: lea r9, [rsp + 0x20]",
+      "0xfe0f28: mov r8d, 8",
+      "0xfe0f2e: mov rcx, rbx",
+      "0xfe0f31: call 0x8869e0",
+      "0xfe0f36: mov qword ptr [rdi + 0x58], rax",
+      "0xfe0f3a: test rax, rax",
+      "0xfe0f3d: je 0xfe0f89",
+      "0xfe0f3f: mov qword ptr [rdi + 0x60], r12",
+      "0xfe0f43: mov rcx, qword ptr [r15 + 8]",
+      "0xfe0f47: lea r8, [rsp + 0x30]",
+      "0xfe0f4c: mov r9, qword ptr [rdi + 0x58]",
+      "0xfe0f50: mov rdx, qword ptr [rdi + 0x48]",
+      "0xfe0f54: mov rax, qword ptr [rcx + 0x590]",
+      "0xfe0f5b: mov rcx, qword ptr [rcx + 8]",
+      "0xfe0f5f: call rax"
+    ],
+    "extentSource": [
+      "0x1002850: xor byte ptr [rcx - 0x75], al",
+      "0x1002853: fiadd dword ptr [rbp - 0x75]",
+      "0x1002856: retf 0x8b49",
+      "0x1002859: ret 0x8944",
+      "0x100285c: xchg ebp, eax",
+      "0x100285d: cmp byte ptr [rcx], al",
+      "0x100285f: add byte ptr [rax], al",
+      "0x1002861: shr rax, 0x20",
+      "0x1002865: mov dword ptr [rbp + 0x13c], eax",
+      "0x100286b: mov rax, qword ptr [rbp + 0x138]",
+      "0x1002872: mov ecx, edx",
+      "0x1002874: shl rcx, 0x20",
+      "0x1002878: mov qword ptr [r15 + 0x9c], rax",
+      "0x100287f: mov eax, r9d",
+      "0x1002882: or rcx, rax",
+      "0x1002885: mov qword ptr [r15 + 0xa4], rcx",
+      "0x100288c: cmp ebx, esi",
+      "0x100288e: jne 0x1002895"
+    ],
+    "extentCreateInfo": [
+      "0x100294b: mov dword ptr [rdi + 4], ecx",
+      "0x100294e: mov rax, qword ptr [r13 + 0x10]",
+      "0x1002952: mov qword ptr [r15 + 0x20], rax",
+      "0x1002956: mov eax, dword ptr [rbp - 0x7c]",
+      "0x1002959: mov dword ptr [r15 + 0x28], eax",
+      "0x100295d: mov eax, dword ptr [rbp + 0x2c]",
+      "0x1002960: mov dword ptr [r15 + 0x2c], edx",
+      "0x1002964: mov dword ptr [r15 + 0x30], ecx",
+      "0x1002968: mov qword ptr [r15 + 0x34], r10",
+      "0x100296c: mov dword ptr [r15 + 0x3c], r11d",
+      "0x1002970: mov dword ptr [r15 + 0x40], r9d",
+      "0x1002974: mov qword ptr [r15 + 0x44], r14"
+    ],
+    "deathClear": [
+      "0x304390: sub rsp, 0x38",
+      "0x304394: mov r8d, 0x10",
+      "0x30439a: lea rdx, [rsp + 0x20]",
+      "0x30439f: call 0x9c7aa0",
+      "0x3043a4: mov rax, qword ptr [rsp + 0x28]",
+      "0x3043a9: xor ecx, ecx",
+      "0x3043ab: mov qword ptr [rax + 0x36ea08], rcx",
+      "0x3043b2: mov qword ptr [rax + 0x3e6a80], rcx",
+      "0x3043b9: mov qword ptr [rax + 0x3bea58], rcx",
+      "0x3043c0: add rsp, 0x38",
+      "0x3043c4: ret ",
+      "0x3043c5: int3 ",
+      "0x3043c6: int3 "
+    ],
+    "deathSelect": [
+      "0x316229: mov ecx, 0x3e6a78",
+      "0x31622e: jmp 0x31624d",
+      "0x316230: mov rax, qword ptr [rip + 0x1213c11]",
+      "0x316237: mov ecx, 0x36ea00",
+      "0x31623c: xor rdx, qword ptr [rip + 0x1213bfd]",
+      "0x316243: xor rax, r8",
+      "0x316246: or rdx, rax",
+      "0x316249: cmove rcx, r9",
+      "0x31624d: add rcx, qword ptr [rbp - 0x70]",
+      "0x316251: call 0x302890",
+      "0x316256: mov rsi, rax",
+      "0x316259: test rax, rax"
+    ],
+    "deathStride": [
+      "0x3028c3: mov rax, qword ptr [rbx + 8]",
+      "0x3028c7: xor edx, edx",
+      "0x3028c9: lea rcx, [rax + rax*4]",
+      "0x3028cd: mov rax, qword ptr [rbx]",
+      "0x3028d0: shl rcx, 5",
+      "0x3028d4: add rax, rcx",
+      "0x3028d7: xor ecx, ecx",
+      "0x3028d9: mov qword ptr [rax + 0x10], rdx",
+      "0x3028dd: mov qword ptr [rax + 0x18], rdx",
+      "0x3028e1: mov qword ptr [rax + 0x20], rdx",
+      "0x3028e5: mov qword ptr [rax + 0x50], rdx",
+      "0x3028e9: mov qword ptr [rax + 0x58], rdx"
+    ]
+  },
+  "deathWindows": {
+    "0x304390": {
+      "bytes": "48 83 ec 38 41 b8 10 00 00 00 48 8d 54 24 20",
+      "identicalToNov3": true
+    },
+    "0x30439f": {
+      "bytes": "e8 fc 36 6c 00",
+      "identicalToNov3": false
+    },
+    "0x3043b9": {
+      "bytes": "48 89 88 58 ea 3b 00",
+      "identicalToNov3": true
+    },
+    "0x316229": {
+      "bytes": "b9 78 6a 3e 00 eb 1d",
+      "identicalToNov3": true
+    },
+    "0x31624d": {
+      "bytes": "48 03 4d 90 e8 3a c6 fe ff",
+      "identicalToNov3": true
+    },
+    "0x3028c3": {
+      "bytes": "48 8b 43 08 33 d2 48 8d 0c 80 48 8b 03 48 c1 e1 05 48 03 c1",
+      "identicalToNov3": true
+    },
+    "0x316457": {
+      "bytes": "0f 10 07 0f 11 46 10 f2 0f 10 4f 10 f2 0f 11 4e 20",
+      "identicalToNov3": true
+    },
+    "0x31659d": {
+      "bytes": "89 46 30",
+      "identicalToNov3": true
+    },
+    "0x3043b2": {
+      "bytes": "48 89 88 80 6a 3e 00",
+      "identicalToNov3": true
+    }
+  }
+}

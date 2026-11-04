@@ -1,0 +1,128 @@
+{
+  "verification": "static only; call/branch targets and RIP displacements excluded from instruction comparison",
+  "sha256": "ce6fdba63e27744943b695921383a29133285d359e07671f6ca33a47e2147618",
+  "comparisons": [
+    {
+      "old": "player_camera_transform.txt",
+      "new": "player_camera_transform.txt",
+      "instructions": 430,
+      "differences": []
+    },
+    {
+      "old": "player_waypoints_ui.txt",
+      "new": "player_waypoints_ui.txt",
+      "instructions": 212,
+      "differences": []
+    },
+    {
+      "old": "update_ui_data.txt",
+      "new": "update_ui_data.txt",
+      "instructions": 954,
+      "differences": []
+    },
+    {
+      "old": "helper-9c26c0.txt",
+      "new": "helper-9c26a0.txt",
+      "instructions": 560,
+      "differences": []
+    },
+    {
+      "old": "helper-9c7ac0.txt",
+      "new": "helper-9c7aa0.txt",
+      "instructions": 414,
+      "differences": []
+    },
+    {
+      "old": "helper-9bf920.txt",
+      "new": "helper-9bf900.txt",
+      "instructions": 21,
+      "differences": []
+    },
+    {
+      "old": "helper-3b8330.txt",
+      "new": "helper-3b8330.txt",
+      "instructions": 14,
+      "differences": []
+    },
+    {
+      "old": "helper-9b2b30.txt",
+      "new": "helper-9b2b10.txt",
+      "instructions": 58,
+      "differences": []
+    }
+  ],
+  "metadata": {
+    "0x1e347c0": {
+      "0x38": [],
+      "0x98": [
+        "BasicPlayerInfos",
+        "LocalPlayerData",
+        "g38_items::ItemRegistry"
+      ],
+      "0xb0": [
+        "G38UiPlayData",
+        "g38_items::ItemOrders"
+      ],
+      "0xe0": [
+        "RenderTransform"
+      ]
+    },
+    "0x1e24e40": {
+      "0x38": [
+        "DynamicNetworkLocomotion",
+        "RenderTransform"
+      ],
+      "0x98": [
+        "LocalPlayerData",
+        "g38_items::ItemRegistry"
+      ],
+      "0xb0": [
+        "LocalPlayerCamera",
+        "LocalPlayerCameraTransform"
+      ],
+      "0xe0": []
+    },
+    "0x1e2edc0": {
+      "0x38": [],
+      "0x98": [
+        "LocalPlayerData"
+      ],
+      "0xb0": [
+        "G38UiPlayData"
+      ],
+      "0xe0": [
+        "PlayerWaypoint"
+      ]
+    }
+  },
+  "windows": {
+    "0x2b7820": "40 55 57 48 8D AC 24 B8 FE FF FF 48 81 EC 48 02 00 00",
+    "0x313f20": "48 89 5C 24 18 48 89 6C 24 20 56 57 41 55 41 56 41 57",
+    "0x31d2b0": "48 89 4C 24 08 55 53 57 41 54 41 55 41 57 48 8D AC 24 A8 FE FF FF",
+    "0x31d2cd": "41 B8 98 00 00 00 48 8D 54 24 20 E8 C3 A7 6A 00",
+    "0x313f85": "E8 E6 EA 69 00",
+    "0x31d8ff": "48 8B 85 90 01 00 00 48 8B 7C 24 50 48 8B 08 E8 8D 21 6A 00 48 8B D0 48 8D 4D F0 45 8B CE 4C 8B C7 E8 4B 51 69 00",
+    "0x3b8330": "8D 42 FF 3D FE 03 00 00 77 1D 4C 8D 0C 80 49 C1 E1 05 43 39 14 01 75 0F",
+    "0x9bfaa0": "48 8B 41 30 C3",
+    "0x9bf919": "48 8B 88 30 08 00 00"
+  },
+  "unchanged_layout": {
+    "camera_entity_array": "0x830",
+    "camera_record": "0x50",
+    "waypoint_record": "0x30",
+    "remote_record": "0x98",
+    "basic_player_stride": "0xA0",
+    "entity_index_stride": "0x10",
+    "transform_xyz": [
+      "0",
+      "8",
+      "10"
+    ],
+    "transform_quaternion": [
+      "18",
+      "1c",
+      "20",
+      "24"
+    ]
+  }
+}

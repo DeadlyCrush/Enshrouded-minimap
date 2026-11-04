@@ -1189,7 +1189,7 @@ namespace
     ModMetaData g_metaData = {
         "minimap_mod",
         "Community-maintained in-game minimap with a world clock, players, pings, waypoints and death markers.",
-        "0.5.15",
+        "0.5.16",
         "elxokker; community maintenance by Aerox912",
         "0.0.3",
         true,
@@ -3293,18 +3293,18 @@ namespace
             BytesMatchRva(0x29C3F3, stride, sizeof(stride));
     }
 
-    bool HasVerifiedRelease10DeathLayout(bool patch1003 = false, bool patch1010 = false)
+    bool HasVerifiedRelease10DeathLayout(bool patch1003 = false, bool patch1010 = false, bool patch1011 = false)
     {
-        const std::uint8_t init[] = {0xE8,static_cast<std::uint8_t>(patch1010 ? 0x1C : patch1003 ? 0xAC : 0x0C),static_cast<std::uint8_t>(patch1010 ? 0x37 : patch1003 ? 0xD1 : 0xBD),static_cast<std::uint8_t>(patch1010 ? 0x6C : 0x6B),0};
+        const std::uint8_t init[] = {0xE8,static_cast<std::uint8_t>(patch1011 ? 0xFC : patch1010 ? 0x1C : patch1003 ? 0xAC : 0x0C),static_cast<std::uint8_t>(patch1011 ? 0x36 : patch1010 ? 0x37 : patch1003 ? 0xD1 : 0xBD),static_cast<std::uint8_t>(patch1010 ? 0x6C : 0x6B),0};
         const std::uint8_t clear[] = {0x48,0x89,0x88,0x80,0x6A,0x3E,0};
         const std::uint8_t select[] = {0xB9,0x78,0x6A,0x3E,0,0xEB,0x1D};
         const std::uint8_t allocate[] = {0x48,0x03,0x4D,0x90,0xE8,static_cast<std::uint8_t>(patch1010 ? 0x3A : 0xAA),0xC6,0xFE,0xFF};
         const std::uint8_t stride[] = {0x48,0x8B,0x43,0x08,0x33,0xD2,0x48,0x8D,0x0C,0x80,0x48,0x8B,0x03,0x48,0xC1,0xE1,0x05,0x48,0x03,0xC1};
         const std::uint8_t position[] = {0x0F,0x10,0x07,0x0F,0x11,0x46,0x10,0xF2,0x0F,0x10,0x4F,0x10,0xF2,0x0F,0x11,0x4E,0x20};
         const std::uint8_t key[] = {0x89,0x46,0x30};
-        return IsNamedSystemAt((patch1010 ? 0x1E27D50 : patch1003 ? 0x1E063D0 : 0x1E041D0), "clear_map_markers_for_ui", (patch1010 ? 0x304390 : patch1003 ? 0x2FEFE0 : 0x2FEE40)) &&
-            IsNamedSystemAt((patch1010 ? 0x1E312F0 : patch1003 ? 0x1E0F970 : 0x1E0D770), "replicate_map_markers_for_ui", (patch1010 ? 0x3160D0 : patch1003 ? 0x310CB0 : 0x310B10)) &&
-            reinterpret_cast<uintptr_t>(g_iterInit) == g_exeBase + (patch1010 ? 0x9C7AC0 : patch1003 ? 0x9BC1A0 : 0x9BAB60) &&
+        return IsNamedSystemAt((patch1011 ? 0x1E26D90 : patch1010 ? 0x1E27D50 : patch1003 ? 0x1E063D0 : 0x1E041D0), "clear_map_markers_for_ui", (patch1010 ? 0x304390 : patch1003 ? 0x2FEFE0 : 0x2FEE40)) &&
+            IsNamedSystemAt((patch1011 ? 0x1E30330 : patch1010 ? 0x1E312F0 : patch1003 ? 0x1E0F970 : 0x1E0D770), "replicate_map_markers_for_ui", (patch1010 ? 0x3160D0 : patch1003 ? 0x310CB0 : 0x310B10)) &&
+            reinterpret_cast<uintptr_t>(g_iterInit) == g_exeBase + (patch1011 ? 0x9C7AA0 : patch1010 ? 0x9C7AC0 : patch1003 ? 0x9BC1A0 : 0x9BAB60) &&
             BytesMatchRva((patch1010 ? 0x304390 : patch1003 ? 0x2FEFE0 : 0x2FEE40), g_clearMapMarkersExpected.data(), g_clearMapMarkersExpected.size()) &&
             BytesMatchRva((patch1010 ? 0x30439F : patch1003 ? 0x2FEFEF : 0x2FEE4F), init, sizeof(init)) && BytesMatchRva((patch1010 ? 0x3043B2 : patch1003 ? 0x2FF002 : 0x2FEE62), clear, sizeof(clear)) &&
             BytesMatchRva((patch1010 ? 0x316229 : patch1003 ? 0x310E09 : 0x310C69), select, sizeof(select)) && BytesMatchRva((patch1010 ? 0x31624D : patch1003 ? 0x310E2D : 0x310C8D), allocate, sizeof(allocate)) &&
@@ -9796,8 +9796,10 @@ namespace
 
             wchar_t executable[MAX_PATH]{};
             const bool haveExecutable = GetModuleFileNameW(nullptr, executable, MAX_PATH) != 0;
-            const bool patch1010 = haveExecutable && ClientExecutableMatchesSha256(executable,
-                "0403981fd2e8ad18bd8c5698dff03c8d505b5a46677832c496db9c645513f2a6");
+            const bool patch1011 = haveExecutable && ClientExecutableMatchesSha256(executable,
+                "ce6fdba63e27744943b695921383a29133285d359e07671f6ca33a47e2147618");
+            const bool patch1010 = patch1011 || (haveExecutable && ClientExecutableMatchesSha256(executable,
+                "0403981fd2e8ad18bd8c5698dff03c8d505b5a46677832c496db9c645513f2a6"));
             const bool patch1003 = patch1010 || (haveExecutable && ClientExecutableMatchesSha256(executable,
                 "d64966e23b1a458ee6f147bcbceac0b577fa7e39a212f371287d8cc119817882"));
             const bool hotfix = patch1003 || (haveExecutable && ClientExecutableMatchesSha256(executable,
@@ -9821,39 +9823,39 @@ namespace
                 const std::array<std::uint8_t,20> vulkan = {
                     0x40,0x55,0x53,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8B,0xEC,0x48,0x83,0xEC,0x58 };
                 const std::uint8_t entitySlot[] = {0x48,0x8B,0x88,0x30,0x08,0,0};
-                if ((patch1010 && !BytesMatchRva(0x9BF939, entitySlot, sizeof(entitySlot))) ||
-                    !IsNamedSystemAt((patch1010 ? 0x1E25E00 : patch1003 ? 0x1E04490 : hotfix ? 0x1E02290 : 0x1E01010), "player_camera_transform", (patch1010 ? 0x2B7820 : patch1003 ? 0x2B2B60 : hotfix ? 0x2B29C0 : 0x2B26A0)) ||
-                    !IsNamedSystemAt((patch1010 ? 0x1DFF300 : patch1003 ? 0x1DDD9E0 : hotfix ? 0x1DDB7E0 : 0x1DDA570), "local_player_ui_render_setup", (patch1010 ? 0x388D80 : patch1003 ? 0x382C20 : hotfix ? 0x382A80 : 0x382760)) ||
+                if ((patch1010 && !BytesMatchRva(patch1011 ? 0x9BF919 : 0x9BF939, entitySlot, sizeof(entitySlot))) ||
+                    !IsNamedSystemAt((patch1011 ? 0x1E24E40 : patch1010 ? 0x1E25E00 : patch1003 ? 0x1E04490 : hotfix ? 0x1E02290 : 0x1E01010), "player_camera_transform", (patch1010 ? 0x2B7820 : patch1003 ? 0x2B2B60 : hotfix ? 0x2B29C0 : 0x2B26A0)) ||
+                    !IsNamedSystemAt((patch1011 ? 0x1DFE340 : patch1010 ? 0x1DFF300 : patch1003 ? 0x1DDD9E0 : hotfix ? 0x1DDB7E0 : 0x1DDA570), "local_player_ui_render_setup", (patch1010 ? 0x388D80 : patch1003 ? 0x382C20 : hotfix ? 0x382A80 : 0x382760)) ||
                     !BytesMatchRva((patch1010 ? 0x2B7820 : patch1003 ? 0x2B2B60 : hotfix ? 0x2B29C0 : 0x2B26A0), camera.data(), camera.size()) ||
-                    !BytesMatchRva((patch1010 ? 0xFEDA70 : patch1003 ? 0xFD4620 : hotfix ? 0xFD1A10 : 0xFD13D0), present.data(), present.size()) ||
-                    !BytesMatchRva((patch1010 ? 0xFFA210 : patch1003 ? 0xFE0BE0 : hotfix ? 0xFDDFA0 : 0xFDD960), vulkan.data(), vulkan.size()))
+                    !BytesMatchRva((patch1011 ? 0xFEDA50 : patch1010 ? 0xFEDA70 : patch1003 ? 0xFD4620 : hotfix ? 0xFD1A10 : 0xFD13D0), present.data(), present.size()) ||
+                    !BytesMatchRva((patch1011 ? 0xFFA1F0 : patch1010 ? 0xFFA210 : patch1003 ? 0xFE0BE0 : hotfix ? 0xFDDFA0 : 0xFDD960), vulkan.data(), vulkan.size()))
                 {
                     Log("[Minimap] 1.0 memory differs from pinned executable; no hooks installed");
                     return;
                 }
-                g_iterInit = reinterpret_cast<IterInitFn>(g_exeBase + (patch1010 ? 0x9C7AC0 : patch1003 ? 0x9BC1A0 : hotfix ? 0x9BAB60 : 0x9BA5A0));
-                g_iterNext = reinterpret_cast<IterNextFn>(g_exeBase + (patch1010 ? 0x9C26C0 : patch1003 ? 0x9B6E60 : hotfix ? 0x9B5A50 : 0x9B5490));
+                g_iterInit = reinterpret_cast<IterInitFn>(g_exeBase + (patch1011 ? 0x9C7AA0 : patch1010 ? 0x9C7AC0 : patch1003 ? 0x9BC1A0 : hotfix ? 0x9BAB60 : 0x9BA5A0));
+                g_iterNext = reinterpret_cast<IterNextFn>(g_exeBase + (patch1011 ? 0x9C26A0 : patch1010 ? 0x9C26C0 : patch1003 ? 0x9B6E60 : hotfix ? 0x9B5A50 : 0x9B5490));
                 g_playerCameraTransformHook = InstallEntryHook((patch1010 ? 0x2B7820 : patch1003 ? 0x2B2B60 : hotfix ? 0x2B29C0 : 0x2B26A0), camera,
                     reinterpret_cast<void*>(&CapturePlayerCameraTransformHook), "1.0 local camera");
-                g_renderPresentFrameHook = InstallEntryHook((patch1010 ? 0xFEDA70 : patch1003 ? 0xFD4620 : hotfix ? 0xFD1A10 : 0xFD13D0), present,
+                g_renderPresentFrameHook = InstallEntryHook((patch1011 ? 0xFEDA50 : patch1010 ? 0xFEDA70 : patch1003 ? 0xFD4620 : hotfix ? 0xFD1A10 : 0xFD13D0), present,
                     reinterpret_cast<void*>(&CaptureRenderPresentFrameHook), "1.0 present");
                 // Wrap a verified CALL and observe the completed table before
                 // the caller starts creating its swapchain. Preserve its result.
-                g_release10VulkanInit = reinterpret_cast<VulkanInitFn>(g_exeBase + (patch1010 ? 0xFFA210 : patch1003 ? 0xFE0BE0 : hotfix ? 0xFDDFA0 : 0xFDD960));
-                g_vulkanDeviceTableInitHook = InstallVerifiedCallHook((patch1010 ? 0xFD8663 : patch1003 ? 0xFBF573 : hotfix ? 0xFBC9AA : 0xFBC36A), (patch1010 ? 0xFFA210 : patch1003 ? 0xFE0BE0 : hotfix ? 0xFDDFA0 : 0xFDD960),
+                g_release10VulkanInit = reinterpret_cast<VulkanInitFn>(g_exeBase + (patch1011 ? 0xFFA1F0 : patch1010 ? 0xFFA210 : patch1003 ? 0xFE0BE0 : hotfix ? 0xFDDFA0 : 0xFDD960));
+                g_vulkanDeviceTableInitHook = InstallVerifiedCallHook((patch1011 ? 0xFD8643 : patch1010 ? 0xFD8663 : patch1003 ? 0xFBF573 : hotfix ? 0xFBC9AA : 0xFBC36A), (patch1011 ? 0xFFA1F0 : patch1010 ? 0xFFA210 : patch1003 ? 0xFE0BE0 : hotfix ? 0xFDDFA0 : 0xFDD960),
                     reinterpret_cast<uintptr_t>(&CaptureRelease10VulkanInit));
                 // Validated 1.0 PlayerWaypoint lookup; separate from unported pings.
                 const std::array<std::uint8_t,18> waypointPrefix = {
                     0x48,0x89,0x5C,0x24,0x18,0x48,0x89,0x6C,0x24,0x20,
                     0x56,0x57,0x41,0x55,0x41,0x56,0x41,0x57 };
                 const std::uint8_t worldGetter[] = {0x48,0x8B,0x41,0x30,0xC3};
-                const std::uint8_t componentCall[] = {0xE8, static_cast<std::uint8_t>(patch1010 ? 0x06 : patch1003 ? 0x86 : hotfix ? 0x46 : 0xA6), static_cast<std::uint8_t>(patch1010 ? 0xEB : patch1003 ? 0x86 : hotfix ? 0x74 : 0x71),0x69,0x00};
-                if (IsNamedSystemAt((patch1010 ? 0x1E2FD80 : patch1003 ? 0x1E0E400 : hotfix ? 0x1E0C200 : 0x1E0AF80), "player_waypoints_ui", (patch1010 ? 0x313F20 : patch1003 ? 0x30EB10 : hotfix ? 0x30E970 : 0x30E650)) &&
-                    BytesMatchRva((patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20), worldGetter, sizeof(worldGetter)) &&
+                const std::uint8_t componentCall[] = {0xE8, static_cast<std::uint8_t>(patch1011 ? 0xE6 : patch1010 ? 0x06 : patch1003 ? 0x86 : hotfix ? 0x46 : 0xA6), static_cast<std::uint8_t>(patch1011 ? 0xEA : patch1010 ? 0xEB : patch1003 ? 0x86 : hotfix ? 0x74 : 0x71),0x69,0x00};
+                if (IsNamedSystemAt((patch1011 ? 0x1E2EDC0 : patch1010 ? 0x1E2FD80 : patch1003 ? 0x1E0E400 : hotfix ? 0x1E0C200 : 0x1E0AF80), "player_waypoints_ui", (patch1010 ? 0x313F20 : patch1003 ? 0x30EB10 : hotfix ? 0x30E970 : 0x30E650)) &&
+                    BytesMatchRva((patch1011 ? 0x9BFAA0 : patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20), worldGetter, sizeof(worldGetter)) &&
                     BytesMatchRva((patch1010 ? 0x313F85 : patch1003 ? 0x30EB75 : hotfix ? 0x30E9D5 : 0x30E6B5), componentCall, sizeof(componentCall)))
                 {
-                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + (patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20));
-                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + (patch1010 ? 0x9B2A90 : patch1003 ? 0x9A7200 : hotfix ? 0x9A5E20 : 0x9A5860));
+                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + (patch1011 ? 0x9BFAA0 : patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20));
+                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + (patch1011 ? 0x9B2A70 : patch1010 ? 0x9B2A90 : patch1003 ? 0x9A7200 : hotfix ? 0x9A5E20 : 0x9A5860));
                     g_playerWaypointsUiHook = InstallEntryHook((patch1010 ? 0x313F20 : patch1003 ? 0x30EB10 : hotfix ? 0x30E970 : 0x30E650), waypointPrefix,
                         reinterpret_cast<void*>(&CaptureWaypointsHook), "1.0 local waypoint component");
                     g_localWaypointLayoutSupported = g_playerWaypointsUiHook != nullptr;
@@ -9862,18 +9864,18 @@ namespace
                     0x48,0x89,0x4C,0x24,0x08,0x55,0x53,0x57,0x41,0x54,0x41,0x55,0x41,0x57,
                     0x48,0x8D,0xAC,0x24,0xA8,0xFE,0xFF,0xFF };
                 const std::uint8_t remoteRecord[] = {
-                    0x41,0xB8,0x98,0,0,0,0x48,0x8D,0x54,0x24,0x20,0xE8,static_cast<std::uint8_t>(patch1010 ? 0xE3 : patch1003 ? 0xF3 : hotfix ? 0x53 : 0xB3),static_cast<std::uint8_t>(patch1010 ? 0xA7 : patch1003 ? 0x42 : hotfix ? 0x2E : 0x2B),0x6A,0 };
+                    0x41,0xB8,0x98,0,0,0,0x48,0x8D,0x54,0x24,0x20,0xE8,static_cast<std::uint8_t>(patch1011 ? 0xC3 : patch1010 ? 0xE3 : patch1003 ? 0xF3 : hotfix ? 0x53 : 0xB3),static_cast<std::uint8_t>(patch1010 ? 0xA7 : patch1003 ? 0x42 : hotfix ? 0x2E : 0x2B),0x6A,0 };
                 const std::uint8_t basicStride[] = {
                     0x8D,0x42,0xFF,0x3D,0xFE,0x03,0,0,0x77,0x1D,0x4C,0x8D,0x0C,0x80,
                     0x49,0xC1,0xE1,0x05,0x43,0x39,0x14,0x01,0x75,0x0F };
-                if (IsNamedSystemAt((patch1010 ? 0x1E35780 : patch1003 ? 0x1E13E00 : hotfix ? 0x1E11C00 : 0x1E10980), "update_ui_data", (patch1010 ? 0x31D2B0 : patch1003 ? 0x317E80 : hotfix ? 0x317CE0 : 0x3179C0)) &&
+                if (IsNamedSystemAt((patch1011 ? 0x1E347C0 : patch1010 ? 0x1E35780 : patch1003 ? 0x1E13E00 : hotfix ? 0x1E11C00 : 0x1E10980), "update_ui_data", (patch1010 ? 0x31D2B0 : patch1003 ? 0x317E80 : hotfix ? 0x317CE0 : 0x3179C0)) &&
                     BytesMatchRva((patch1010 ? 0x31D2CD : patch1003 ? 0x317E9D : hotfix ? 0x317CFD : 0x3179DD), remoteRecord, sizeof(remoteRecord)) &&
                     BytesMatchRva((patch1010 ? 0x3B8330 : patch1003 ? 0x3B1CC0 : hotfix ? 0x3B1B20 : 0x3B1800), basicStride, sizeof(basicStride)) &&
-                    BytesMatchRva((patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20), worldGetter, sizeof(worldGetter)) &&
+                    BytesMatchRva((patch1011 ? 0x9BFAA0 : patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20), worldGetter, sizeof(worldGetter)) &&
                     BytesMatchRva((patch1010 ? 0x313F85 : patch1003 ? 0x30EB75 : hotfix ? 0x30E9D5 : 0x30E6B5), componentCall, sizeof(componentCall)))
                 {
-                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + (patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20));
-                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + (patch1010 ? 0x9B2A90 : patch1003 ? 0x9A7200 : hotfix ? 0x9A5E20 : 0x9A5860));
+                    g_getEcsWorld = reinterpret_cast<GetEcsWorldFn>(g_exeBase + (patch1011 ? 0x9BFAA0 : patch1010 ? 0x9BFAC0 : patch1003 ? 0x9B43D0 : hotfix ? 0x9B2FE0 : 0x9B2A20));
+                    g_lookupComponent = reinterpret_cast<LookupComponentFn>(g_exeBase + (patch1011 ? 0x9B2A70 : patch1010 ? 0x9B2A90 : patch1003 ? 0x9A7200 : hotfix ? 0x9A5E20 : 0x9A5860));
                     g_basicPlayerStride = 0xA0;
                     g_playerUiDataHook = InstallEntryHook((patch1010 ? 0x31D2B0 : patch1003 ? 0x317E80 : hotfix ? 0x317CE0 : 0x3179C0), remotePrefix,
                         reinterpret_cast<void*>(&CapturePlayerUiDataHook), "1.0 remote player transforms");
@@ -9883,7 +9885,7 @@ namespace
                     : "[Minimap] 1.0 remote player reader unavailable");
                 Log(g_localWaypointLayoutSupported ? "[Minimap] 1.0 local waypoint reader ready; yellow diamond enabled"
                     : "[Minimap] 1.0 local waypoint reader unavailable");
-                if (hotfix && HasVerifiedRelease10DeathLayout(patch1003, patch1010))
+                if (hotfix && HasVerifiedRelease10DeathLayout(patch1003, patch1010, patch1011))
                 {
                     g_release10DeathArrayOffset = 0x3E6A78;
                     g_deathMapHook = InstallEntryHook(patch1010 ? 0x304390 : patch1003 ? 0x2FEFE0 : 0x2FEE40, g_clearMapMarkersExpected,
@@ -9895,7 +9897,8 @@ namespace
                 g_directCameraTrackingSupported = g_playerCameraTransformHook != nullptr;
                 loadReady_ = g_directCameraTrackingSupported && g_renderPresentFrameHook && g_vulkanDeviceTableInitHook;
                 loaded = loadReady_;
-                Log(patch1010 ? "[Minimap] client profile=1.0.1.0 Steam build 26320373; static validated, gameplay unverified"
+                Log(patch1011 ? "[Minimap] client profile=1.0.1.1 Steam build 26404966; static validated, gameplay unverified"
+                    : patch1010 ? "[Minimap] client profile=1.0.1.0 Steam build 26320373; static validated, gameplay unverified"
                     : patch1003 ? "[Minimap] client profile=1.0.0.3 Steam build 26082781; static validated, gameplay unverified"
                     : hotfix ? "[Minimap] client profile=1.0 Steam build 25988036; static validated, gameplay unverified"
                     : "[Minimap] client profile=1.0 Steam build 25966634; static validated, gameplay unverified");
@@ -10374,7 +10377,7 @@ namespace
 extern "C" __declspec(dllexport) Mod* CreateModInstance()
 {
     InitializeDiagnosticLog();
-    Log("[Minimap] factory version=0.5.15");
+    Log("[Minimap] factory version=0.5.16");
     return new MinimapMod();
 }
 
