@@ -1,0 +1,21 @@
+{
+  "sha256": "5d9ef2f140b8ed49e30dbee655841b89d08baec20f799a1817e171a18a850c77",
+  "systems": {
+    "player_camera_transform": {
+      "registry": "0x1e24e40",
+      "function": "0x2b7900"
+    },
+    "player_waypoints_ui": {
+      "registry": "0x1e2edc0",
+      "function": "0x314000"
+    },
+    "update_ui_data": {
+      "registry": "0x1e347c0",
+      "function": "0x31d390"
+    },
+    "local_player_ui_render_setup": {
+      "registry": "0x1dfe340",
+      "function": "0x388e60"
+    }
+  }
+}

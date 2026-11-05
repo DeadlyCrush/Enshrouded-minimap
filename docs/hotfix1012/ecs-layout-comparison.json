@@ -1,0 +1,168 @@
+{
+  "verification": "static only; call/branch targets and RIP displacements excluded from instruction comparison",
+  "sha256": "5d9ef2f140b8ed49e30dbee655841b89d08baec20f799a1817e171a18a850c77",
+  "comparisons": [
+    {
+      "old": "player_camera_transform.txt",
+      "new": "player_camera_transform.txt",
+      "instructions": 430,
+      "old_count": 430,
+      "new_count": 430,
+      "differences": []
+    },
+    {
+      "old": "player_waypoints_ui.txt",
+      "new": "player_waypoints_ui.txt",
+      "instructions": 225,
+      "old_count": 225,
+      "new_count": 225,
+      "differences": []
+    },
+    {
+      "old": "update_ui_data.txt",
+      "new": "update_ui_data.txt",
+      "instructions": 954,
+      "old_count": 954,
+      "new_count": 954,
+      "differences": []
+    },
+    {
+      "old": "local_player_ui_render_setup.txt",
+      "new": "local_player_ui_render_setup.txt",
+      "instructions": 50,
+      "old_count": 50,
+      "new_count": 50,
+      "differences": []
+    },
+    {
+      "old": "helper-9bf900.txt",
+      "new": "helper-9bf9e0.txt",
+      "instructions": 21,
+      "old_count": 21,
+      "new_count": 21,
+      "differences": []
+    },
+    {
+      "old": "helper-9c26a0.txt",
+      "new": "helper-9c2780.txt",
+      "instructions": 560,
+      "old_count": 560,
+      "new_count": 560,
+      "differences": []
+    },
+    {
+      "old": "helper-9c7aa0.txt",
+      "new": "helper-9c7b80.txt",
+      "instructions": 414,
+      "old_count": 414,
+      "new_count": 414,
+      "differences": []
+    },
+    {
+      "old": "helper-9bfaa0.txt",
+      "new": "helper-9bfb80.txt",
+      "instructions": 2,
+      "old_count": 2,
+      "new_count": 2,
+      "differences": []
+    },
+    {
+      "old": "helper-9b2a70.txt",
+      "new": "helper-9b2b50.txt",
+      "instructions": 8,
+      "old_count": 8,
+      "new_count": 8,
+      "differences": []
+    },
+    {
+      "old": "helper-9b2b10.txt",
+      "new": "helper-9b2bf0.txt",
+      "instructions": 58,
+      "old_count": 58,
+      "new_count": 58,
+      "differences": []
+    },
+    {
+      "old": "helper-3b8330.txt",
+      "new": "helper-3b8410.txt",
+      "instructions": 14,
+      "old_count": 14,
+      "new_count": 14,
+      "differences": []
+    }
+  ],
+  "metadata": {
+    "0x1e347c0": {
+      "0x38": [],
+      "0x98": [
+        "BasicPlayerInfos",
+        "LocalPlayerData",
+        "g38_items::ItemRegistry"
+      ],
+      "0xb0": [
+        "G38UiPlayData",
+        "g38_items::ItemOrders"
+      ],
+      "0xe0": [
+        "RenderTransform"
+      ]
+    },
+    "0x1e24e40": {
+      "0x38": [
+        "DynamicNetworkLocomotion",
+        "RenderTransform"
+      ],
+      "0x98": [
+        "LocalPlayerData",
+        "g38_items::ItemRegistry"
+      ],
+      "0xb0": [
+        "LocalPlayerCamera",
+        "LocalPlayerCameraTransform"
+      ],
+      "0xe0": []
+    },
+    "0x1e2edc0": {
+      "0x38": [],
+      "0x98": [
+        "LocalPlayerData"
+      ],
+      "0xb0": [
+        "G38UiPlayData"
+      ],
+      "0xe0": [
+        "PlayerWaypoint"
+      ]
+    }
+  },
+  "windows": {
+    "0x2b7900": "40 55 57 48 8D AC 24 B8 FE FF FF 48 81 EC 48 02 00 00",
+    "0x314000": "48 89 5C 24 18 48 89 6C 24 20 56 57 41 55 41 56 41 57",
+    "0x31d390": "48 89 4C 24 08 55 53 57 41 54 41 55 41 57 48 8D AC 24 A8 FE FF FF",
+    "0x31d3ad": "41 B8 98 00 00 00 48 8D 54 24 20 E8 C3 A7 6A 00",
+    "0x314065": "E8 E6 EA 69 00",
+    "0x31d9df": "48 8B 85 90 01 00 00 48 8B 7C 24 50 48 8B 08 E8 8D 21 6A 00 48 8B D0 48 8D 4D F0 45 8B CE 4C 8B C7 E8 4B 51 69 00",
+    "0x3b8410": "8D 42 FF 3D FE 03 00 00 77 1D 4C 8D 0C 80 49 C1 E1 05 43 39 14 01 75 0F",
+    "0x9bfb80": "48 8B 41 30 C3",
+    "0x9bf9f9": "48 8B 88 30 08 00 00"
+  },
+  "unchanged_layout": {
+    "camera_entity_array": "0x830",
+    "camera_record": "0x50",
+    "waypoint_record": "0x30",
+    "remote_record": "0x98",
+    "basic_player_stride": "0xA0",
+    "entity_index_stride": "0x10",
+    "transform_xyz": [
+      "0",
+      "8",
+      "10"
+    ],
+    "transform_quaternion": [
+      "18",
+      "1c",
+      "20",
+      "24"
+    ]
+  }
+}

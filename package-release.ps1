@@ -17,7 +17,7 @@ if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Commit tracked source changes befor
 
 $output = [System.IO.Path]::GetFullPath($OutputDirectory)
 $stage = Join-Path $output "stage-v$version"
-$zipPath = Join-Path $output "enshrouded-minimap-community-v$version.zip"
+$zipPath = Join-Path $output "Enshrouded-Minimap-DeadlyCrushVer-$version.zip"
 if ((Test-Path -LiteralPath $stage) -or (Test-Path -LiteralPath $zipPath)) {
   throw 'Release staging/output already exists. Use a new output directory.'
 }
@@ -39,8 +39,8 @@ $buildInfo = [ordered]@{
   commit = $commit
   platform = 'Windows x64'
   testedClientDataRevision = $null
-  staticallyValidatedSteamBuild = 26404966
-  clientExecutableSha256 = 'ce6fdba63e27744943b695921383a29133285d359e07671f6ca33a47e2147618'
+  staticallyValidatedSteamBuild = 26430625
+  clientExecutableSha256 = '5d9ef2f140b8ed49e30dbee655841b89d08baec20f799a1817e171a18a850c77'
   gameplayVerified = $false
   releaseStatus = 'experimental 1.0 core preview'
   unavailableFeatures = @('pings','live world markers','clock','weather','exploration fog')
